@@ -181,9 +181,17 @@ mongoose.connect(MONGODB_URI, {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
 })
-.then(() => {
+.then(async () => {
   console.log('✅ MongoDB connected');
-  
+
+  // Verify SMTP connection on startup (non-fatal)
+  try {
+    const { verifyTransporter } = require('./utils/email');
+    await verifyTransporter();
+  } catch (e) {
+    console.warn('⚠️  Email transporter check skipped:', e.message);
+  }
+
   // Initialize socket auction engine
   require('./socket/auctionEngine')(io);
   
