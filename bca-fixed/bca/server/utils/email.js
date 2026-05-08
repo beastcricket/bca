@@ -1,138 +1,51 @@
-const nodemailer = require('nodemailer');
+export default function LoginPage() {
+  const [loading,      setLoading]      = useState(false);
+  const [selectedRole, setSelectedRole] = useState('');
+  const [formError,    setFormError]    = useState<any>(null);
+  const { register, handleSubmit, formState:{ errors } } = useForm<F>();
 
-const isEmailConfigured = () => {
-  const u = process.env.EMAIL_USER || '';
-  const p = process.env.EMAIL_PASS || '';
-  const configured = u.length > 0 && p.length > 0 && u !== 'your_email@gmail.com' && p !== 'your_app_password_here';
-  console.log('✅ Email configured:', configured ? 'YES' : 'NO');
-  return configured;
-};
-
-const createTransport = () => {
-  const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-    tls: { rejectUnauthorized: false },
-    connectionTimeout: 10000,
-    socketTimeout: 10000,
-  });
-
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error('❌ Email transporter error:', error.message);
-    } else {
-      console.log('✅ Email transporter ready');
+  const onSubmit = async (d: F) => {
+    if (!selectedRole) {
+      setFormError({ text:'Please select your role first.' });
+      return;
     }
-  });
 
-  return transporter;
-};
+    setFormError(null);
+    setLoading(true);
 
-const wrap = (title, body) => `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-  body { margin: 0; padding: 0; background: #04040a; font-family: Arial, sans-serif; }
-  .header { background: linear-gradient(135deg, #f59e0b, #d97706); padding: 32px; text-align: center; }
-  .header h1 { margin: 0; color: #000; font-size: 24px; font-weight: 900; }
-  .body { padding: 36px 32px; background: #0f172a; }
-  .footer { padding: 20px 32px; border-top: 1px solid rgba(255,255,255,0.08); text-align: center; background: #0f172a; }
-  .button { display: inline-block; background: linear-gradient(135deg, #f59e0b, #d97706); color: #000; padding: 14px 36px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 16px; }
-  .text-muted { color: #94a3b8; font-size: 15px; line-height: 1.7; }
-  .text-small { color: #475569; font-size: 12px; }
-</style>
-</head>
-<body>
-<table width="100%" cellpadding="0" cellspacing="0">
-<tr><td align="center" style="padding: 40px 20px;">
-<table width="580" cellpadding="0" cellspacing="0" style="background: #0f172a; border-radius: 16px; overflow: hidden; border: 1px solid rgba(245,158,11,0.25);">
-  <tr><td class="header">
-    <h1>🏏 BEAST CRICKET AUCTION</h1>
-    <p style="margin: 6px 0 0; color: rgba(0,0,0,0.6); font-size: 13px;">Premium IPL-Style Auction Platform</p>
-  </td></tr>
-  <tr><td class="body">
-    <h2 style="color: #f59e0b; font-size: 20px; margin: 0 0 16px;">${title}</h2>
-    ${body}
-  </td></tr>
-  <tr><td class="footer">
-    <p class="text-small">© 2026 Beast Cricket Auction. This is an automated email — please do not reply.</p>
-  </td></tr>
-</table>
-</td></tr>
-</table>
-</body>
-</html>`;
+    try {
+      console.log('🔐 Logging in...');
+      const res = await api.post('/auth/login', {
+        email: d.email.trim().toLowerCase(),
+        password: d.password,
+        role: selectedRole
+      });
 
-const sendVerificationEmail = async (email, name, token) => {
-  try {
-    const baseUrl = process.env.FRONTEND_URL || 'https://bca-frontend-production.up.railway.app';
-    const url = `${baseUrl}/verify-email?token=${token}`;
+      console.log('✅ Login successful');
+      if (res.data.token) {
+        saveToken(res.data.token);
+        localStorage.setItem('role', res.data.user.role);
+      }
 
-    const body = `
-      <p class="text-muted">Hello <strong style="color: #f59e0b;">${name}</strong>,</p>
-      <p class="text-muted">Welcome to Beast Cricket Auction! Click the button below to verify your email and activate your account.</p>
-      <p style="text-align: center; margin: 24px 0;">
-        <a href="${url}" class="button">✅ Verify My Email</a>
-      </p>
-      <p style="color: #64748b; font-size: 13px; margin: 0 0 8px;">If the button doesn't work, copy and paste this link:</p>
-      <p style="color: #f59e0b; font-size: 12px; word-break: break-all; margin: 0 0 16px;">${url}</p>
-      <p class="text-small">⏱ This link expires in <strong>24 hours</strong>.</p>
-    `;
+      const actualRole = res.data.user?.role;
 
-    const transporter = createTransport();
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || `Beast Cricket Auction <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: '🏏 Verify Your Email — Beast Cricket Auction',
-      html: wrap('Verify Your Email', body),
-    });
+      if (actualRole === 'organizer' || actualRole === 'admin') {
+        window.location.href = '/dashboard/organizer';
+      } else if (actualRole === 'team_owner') {
+        window.location.href = '/dashboard/team-owner';
+      } else {
+        window.location.href = '/auctions';
+      }
 
-    console.log('✅ Verification email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error('❌ Failed to send verification email:', error.message);
-    throw error;
-  }
-};
+    } catch (e: any) {
+      console.error('❌ Login error:', e);
+      setFormError(mapError(e.response?.data?.error || '', e.response?.data));
+      setLoading(false);
+    }
+  };
 
-const sendPasswordResetEmail = async (email, name, token) => {
-  try {
-    const baseUrl = process.env.FRONTEND_URL || 'https://bca-frontend-production.up.railway.app';
-    const url = `${baseUrl}/reset-password?token=${token}`;
+  const chosen = ROLES.find(r => r.id === selectedRole);
 
-    const body = `
-      <p class="text-muted">Hello <strong style="color: #f59e0b;">${name}</strong>,</p>
-      <p class="text-muted">We received a request to reset your password. Click below to create a new one. If you didn't request this, you can safely ignore this email.</p>
-      <p style="text-align: center; margin: 24px 0;">
-        <a href="${url}" class="button">🔐 Reset My Password</a>
-      </p>
-      <p style="color: #64748b; font-size: 13px; margin: 0 0 8px;">Link not working? Copy and paste:</p>
-      <p style="color: #f59e0b; font-size: 12px; word-break: break-all; margin: 0 0 16px;">${url}</p>
-      <p class="text-small">⏱ This link expires in <strong>1 hour</strong>.</p>
-    `;
-
-    const transporter = createTransport();
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL_FROM || `Beast Cricket Auction <${process.env.EMAIL_USER}>`,
-      to: email,
-      subject: '🔐 Reset Your Password — Beast Cricket Auction',
-      html: wrap('Reset Your Password', body),
-    });
-
-    console.log('✅ Password reset email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error('❌ Failed to send password reset email:', error.message);
-    throw error;
-  }
-};
-
-module.exports = { isEmailConfigured, sendVerificationEmail, sendPasswordResetEmail };
+  return (
+    <div className="relative min-h-screen flex items-center justify-center bg-background overflow-hidden">
+      <div className="absolute inset-0 bg-cover bg-center opacity-20" style={{ backgroundImage:"url('/stadium-bg.jpg')" }}/>\n      <div className="absolute inset-0" style={{ background:'radial-gradient(ellipse at center,transparent 20%,hsl(222 47% 6% / 0.95) 70%)' }}/>\n      {[{ left:'10%', rotate:'-12deg' },{ left:'90%', rotate:'12deg' }].map((b,i)=>(\n        <div key={i} className="absolute top-0 pointer-events-none"\n          style={{ left:b.left,width:120,height:'60vh',\n            background:'linear-gradient(180deg,hsla(45,100%,90%,0.8) 0%,transparent 100%)',\n            transform:`rotate(${b.rotate})`,\n            transformOrigin:'top center',\n            filter:'blur(25px)',\n            opacity:0.06 }}/>\n      ))}\n      <GoldParticles/>\n      <FireSparkles/>\n\n      <div className="relative z-10 w-full max-w-md mx-4">\n        <div className="flex justify-center mb-5 opacity-0 animate-slide-up">\n          <BeastLogo size={100} glow float3d href=\"/\"/>\n        </div>\n\n        {chosen && (\n          <div className="flex justify-center mb-4 opacity-0 animate-slide-up">\n            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r ${chosen.color} border-gold-subtle`}>\n              <span className="text-lg">{chosen.icon}</span>\n              <span className="font-heading text-sm uppercase tracking-[0.15em] text-primary">{chosen.label}</span>\n              <span className="text-muted-foreground text-xs font-display\">— {chosen.tagline}</span>\n            </div>\n          </div>\n        )}\n\n        <div className="bg-glass-premium rounded-xl p-7 gold-edge opacity-0 animate-slide-up">\n          <h2 className="font-heading text-2xl uppercase tracking-wider text-center mb-1 text-foreground">\n            Welcome Back\n          </h2>\n\n          <p className="text-center text-muted-foreground text-sm mb-5 font-display">\n            Select your role to continue\n          </p>\n\n          <div className="grid grid-cols-3 gap-2 mb-5">\n            {ROLES.map(r => (\n              <button\n                key={r.id}\n                type="button"\n                onClick={() => { setSelectedRole(r.id); setFormError(null); }}\n                className={`relative rounded-lg p-3 text-center transition-all duration-300 ${\n                  selectedRole===r.id ? 'border-gold glow-gold' : 'border-gold-subtle'\n                }`}\n              >\n                <div className="text-2xl mb-1">{r.icon}</div>\n                <div className="font-heading text-[10px] uppercase tracking-wider">\n                  {r.label}\n                </div>\n              </button>\n            ))}\n          </div>\n\n          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">\n            <div>\n              <input {...register('email', { required: 'Email is required' })} type="email" placeholder="Email" className="input-beast"/>\n              {errors.email && <p className="text-destructive text-xs mt-1">{errors.email.message}</p>}\n            </div>\n            \n            <div>\n              <input {...register('password', { required: 'Password is required' })} type="password" placeholder="Password" className="input-beast"/>\n              {errors.password && <p className="text-destructive text-xs mt-1">{errors.password.message}</p>}\n            </div>\n\n            <button type="submit" disabled={loading} className="w-full py-3 bg-primary rounded font-heading uppercase tracking-wider text-sm disabled:opacity-50">\n              {loading ? 'Signing In...' : 'Login'}\n            </button>\n\n            {formError && (\n              <div className="text-destructive text-xs font-heading bg-destructive/10 rounded-lg px-3 py-2 space-y-1">\n                <p>{formError.text}</p>\n                {formError.hint && <p className="text-muted-foreground font-display">{formError.hint}</p>}\n                {formError.link && (\n                  <Link href={formError.link.href} className="text-primary underline font-heading">\n                    {formError.link.label}\n                  </Link>\n                )}\n              </div>\n            )}\n          </form>\n\n          {/* FORGOT PASSWORD & REGISTER LINKS */}\n          <div className="mt-6 space-y-3 border-t border-border/30 pt-4">\n            <Link href="/forgot-password" className="block w-full text-center py-2.5 rounded-lg border border-primary/30 text-primary font-heading uppercase tracking-wider text-xs hover:bg-primary/10 transition-all">\n              🔐 Forgot Password?\n            </Link>\n            \n            <div className="text-center text-xs text-muted-foreground">\n              Don't have an account?{' '}\n              <Link href="/register" className="text-primary hover:text-primary/80 font-heading transition-colors">\n                Register here\n              </Link>\n            </div>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n}
