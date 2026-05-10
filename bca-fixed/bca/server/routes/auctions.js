@@ -114,16 +114,45 @@ router.get('/:id/players', optionalAuth, async (req, res) => {
 router.post('/:id/players', authenticate, authorize('organizer','admin'), upload.single('image'), async (req, res) => {
   try {
     const { name, role, category, nationality, age, basePrice, matches, runs, wickets, average, strikeRate, economy } = req.body;
+
+    // ── Image upload logging ──────────────────────────────────
+    if (req.file) {
+      console.log('📸 Player image uploaded:');
+      console.log('   Original name:', req.file.originalname);
+      console.log('   Mimetype     :', req.file.mimetype);
+      console.log('   Size         :', req.file.size, 'bytes');
+      console.log('   Path/filename:', req.file.path || req.file.filename);
+    } else {
+      console.log('📸 No image uploaded for player:', name);
+    }
+
+    const imageUrl = getImageUrl(req.file);
+    console.log('   Resolved imageUrl:', imageUrl || '(none)');
+
     const player = new Player({
       auctionId: req.params.id, name, role, category,
-      nationality: nationality||'Indian', age: age?parseInt(age):undefined,
+      nationality: nationality || 'Indian',
+      age: age ? parseInt(age) : undefined,
       basePrice: parseInt(basePrice),
-      imageUrl: getImageUrl(req.file),
-      stats: { matches:parseInt(matches)||0, runs:parseInt(runs)||0, wickets:parseInt(wickets)||0, average:parseFloat(average)||0, strikeRate:parseFloat(strikeRate)||0, economy:parseFloat(economy)||0 }
+      imageUrl,
+      stats: {
+        matches:    parseInt(matches)    || 0,
+        runs:       parseInt(runs)       || 0,
+        wickets:    parseInt(wickets)    || 0,
+        average:    parseFloat(average)  || 0,
+        strikeRate: parseFloat(strikeRate) || 0,
+        economy:    parseFloat(economy)  || 0,
+      },
     });
+
     await player.save();
+    console.log('✅ Player saved to DB:', player._id, '| imageUrl:', player.imageUrl || '(none)');
+
     res.status(201).json({ success: true, player });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) {
+    console.error('❌ Add player error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.delete('/:id/players/:playerId', authenticate, authorize('organizer','admin'), async (req, res) => {
