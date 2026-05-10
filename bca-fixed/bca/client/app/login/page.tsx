@@ -42,14 +42,14 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // ✅ FIXED API ROUTE
+      console.log('🔐 Logging in as:', d.email.trim().toLowerCase(), '| role:', selectedRole);
       const res = await api.post('/auth/login', {
         email: d.email.trim().toLowerCase(),
         password: d.password,
         role: selectedRole
       });
 
-      // ✅ SAVE TOKEN + ROLE
+      console.log('✅ Login successful');
       if (res.data.token) {
         saveToken(res.data.token);
         localStorage.setItem('role', res.data.user.role);
@@ -57,7 +57,6 @@ export default function LoginPage() {
 
       const actualRole = res.data.user?.role;
 
-      // ✅ SAFE REDIRECT (NO LOOP)
       if (actualRole === 'organizer' || actualRole === 'admin') {
         window.location.href = '/dashboard/organizer';
       } else if (actualRole === 'team_owner') {
@@ -67,6 +66,7 @@ export default function LoginPage() {
       }
 
     } catch (e: any) {
+      console.error('❌ Login error:', e.response?.data?.error || e.message);
       setFormError(mapError(e.response?.data?.error || '', e.response?.data));
       setLoading(false);
     }
@@ -133,10 +133,17 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <input {...register('email')} type="email" placeholder="Email" className="input-beast"/>
-            <input {...register('password')} type="password" placeholder="Password" className="input-beast"/>
+            <div>
+              <input {...register('email', { required: 'Email is required' })} type="email" placeholder="Email" className="input-beast"/>
+              {errors.email && <p className="text-destructive text-xs mt-1">{errors.email.message}</p>}
+            </div>
 
-            <button type="submit" className="w-full py-3 bg-primary rounded">
+            <div>
+              <input {...register('password', { required: 'Password is required' })} type="password" placeholder="Password" className="input-beast"/>
+              {errors.password && <p className="text-destructive text-xs mt-1">{errors.password.message}</p>}
+            </div>
+
+            <button type="submit" disabled={loading} className="w-full py-3 bg-primary rounded font-heading uppercase tracking-wider text-sm disabled:opacity-50">
               {loading ? 'Signing In...' : 'Login'}
             </button>
 
@@ -153,8 +160,21 @@ export default function LoginPage() {
             )}
           </form>
 
-          <div className="mt-4 text-center">
-            <Link href="/register">Register</Link>
+          {/* FORGOT PASSWORD & REGISTER LINKS */}
+          <div className="mt-6 space-y-3 border-t border-border/30 pt-4">
+            <Link
+              href="/forgot-password"
+              className="block w-full text-center py-2.5 rounded-lg border border-primary/30 text-primary font-heading uppercase tracking-wider text-xs hover:bg-primary/10 transition-all"
+            >
+              🔐 Forgot Password?
+            </Link>
+
+            <div className="text-center text-xs text-muted-foreground">
+              Don&apos;t have an account?{' '}
+              <Link href="/register" className="text-primary hover:text-primary/80 font-heading transition-colors">
+                Register here
+              </Link>
+            </div>
           </div>
         </div>
       </div>
