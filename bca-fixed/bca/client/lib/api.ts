@@ -18,6 +18,19 @@ export const clearToken = () => {
 // baseURL includes /api so all route paths are relative (e.g. '/auctions/my')
 const BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
+/**
+ * Resolve a player/team image URL.
+ * - Cloudinary / external URLs (start with http) → returned as-is
+ * - Local /uploads/ paths → prepend the backend base URL
+ * - null / undefined → return empty string (caller shows fallback)
+ */
+export const imgUrl = (src?: string | null): string => {
+  if (!src) return '';
+  if (src.startsWith('http')) return src;
+  // Local path like /uploads/filename.jpg — prepend backend origin
+  return `${BASE}${src.startsWith('/') ? '' : '/'}${src}`;
+};
+
 const api = axios.create({
   baseURL: `${BASE}/api`,
   withCredentials: true,  // ✅ Changed to true for cookies

@@ -236,7 +236,10 @@ router.post('/:id/teams', authenticate, authorize('organizer','admin'), upload.s
 router.put('/:id/teams/:teamId', authenticate, authorize('organizer','admin'), upload.single('logo'), async (req, res) => {
   try {
     const update = { ...req.body };
-    if (req.file) update.logo = `/uploads/${req.file.filename}`;
+    if (req.file) {
+      update.logo = getImageUrl(req.file);
+      console.log('🖼️  Team logo updated:', update.logo);
+    }
     const team = await Team.findByIdAndUpdate(req.params.teamId, update, { new: true }).populate('ownerId','name email');
     res.json({ success: true, team });
   } catch (e) { res.status(500).json({ error: e.message }); }

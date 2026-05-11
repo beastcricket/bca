@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import AuthGuard from '@/components/shared/AuthGuard';
-import api from '@/lib/api';
+import api, { imgUrl } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { fmt, roleColors, categoryColors, roleIcons } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -289,7 +289,7 @@ export default function ViewerDashboard() {
                               <div className="relative rounded-xl overflow-hidden flex-shrink-0"
                                 style={{ width: 120, height: 160, background: 'hsl(222 40% 10%)' }}>
                                 {liveState.currentPlayer.imageUrl
-                                  ? <img src={liveState.currentPlayer.imageUrl} alt={liveState.currentPlayer.name} className="w-full h-full object-cover object-top"/>
+                                  ? <img src={imgUrl(liveState.currentPlayer.imageUrl)} alt={liveState.currentPlayer.name} className="w-full h-full object-cover object-top"/>
                                   : <div className="w-full h-full flex items-center justify-center text-4xl">{roleIcons[liveState.currentPlayer.role] || '🏏'}</div>}
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top,rgba(0,0,0,0.8),transparent 50%)' }}/>
                               </div>
@@ -385,7 +385,7 @@ export default function ViewerDashboard() {
                           <div className="p-5">
                             <div className="flex items-center gap-3 mb-4">
                               {team.logo
-                                ? <img src={team.logo} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0"/>
+                                ? <img src={imgUrl(team.logo)} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0"/>
                                 : <div className="w-12 h-12 rounded-xl flex items-center justify-center text-black font-bold font-heading flex-shrink-0"
                                     style={{ background: `linear-gradient(135deg,${team.primaryColor},${team.primaryColor}88)`, fontSize: 18 }}>
                                     {team.shortName?.slice(0, 2)}
@@ -443,7 +443,7 @@ export default function ViewerDashboard() {
                         <div key={p._id} className="bg-glass-premium rounded-xl overflow-hidden border-gold-subtle hover:border-gold transition-all">
                           <div className="relative overflow-hidden" style={{ height: 140, background: 'hsl(222 40% 10%)' }}>
                             {p.imageUrl
-                              ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover object-top"/>
+                              ? <img src={imgUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover object-top"/>
                               : <div className="w-full h-full flex items-center justify-center text-4xl">{roleIcons[p.role] || '🏏'}</div>}
                             <div className="absolute inset-0" style={{ background: 'linear-gradient(to top,rgba(0,0,0,0.85),transparent 50%)' }}/>
                             <div className="absolute top-2 right-2">

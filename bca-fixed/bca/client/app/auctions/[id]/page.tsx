@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getSocket } from '@/lib/socket';
 import { fmt, roleColors, categoryColors, roleIcons } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
-import api from '@/lib/api';
+import api, { imgUrl } from '@/lib/api';
 import toast from 'react-hot-toast';
 import confetti from 'canvas-confetti';
 
@@ -257,7 +257,7 @@ export default function LiveAuctionPage() {
                   </div>
                 </div>
                 <div className="text-center mb-6">
-                  {soldData.player?.imageUrl && <img src={soldData.player.imageUrl} alt={soldData.player.name} className="w-20 h-24 rounded-xl object-cover object-top mx-auto mb-3 border-2 border-primary/40"/>}
+                  {soldData.player?.imageUrl && <img src={imgUrl(soldData.player.imageUrl)} alt={soldData.player.name} className="w-20 h-24 rounded-xl object-cover object-top mx-auto mb-3 border-2 border-primary/40"/>}
                   <h3 style={{fontFamily:'Oswald,sans-serif',fontSize:'26px',color:'hsl(45,100%,96%)'}}>{soldData.player?.name}</h3>
                   <p className="text-muted-foreground text-sm">Sold to <span style={{color:soldData.soldTo?.teamColor}} className="font-bold">{soldData.soldTo?.teamName}</span></p>
                   <p className="text-gradient-gold font-bold mt-1" style={{fontFamily:'Oswald,sans-serif',fontSize:'34px'}}>{soldData.soldPriceFormatted}</p>
@@ -313,7 +313,7 @@ export default function LiveAuctionPage() {
                   style={{borderColor:leading?team.primaryColor+'80':mine?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)',
                     background:leading?`${team.primaryColor}12`:mine?'rgba(255,255,255,0.04)':'hsla(222,30%,11%,0.5)'}}>
                   <div className="flex items-center gap-2 mb-2">
-                    {team.logo?<img src={team.logo} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0"/>
+                    {team.logo?<img src={imgUrl(team.logo)} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0"/>
                       :<div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-black flex-shrink-0"
                         style={{background:`linear-gradient(135deg,${team.primaryColor},${team.primaryColor}88)`,fontFamily:'Oswald,sans-serif'}}>{team.shortName?.slice(0,2)}</div>}
                     <div className="flex-1 min-w-0">
@@ -448,7 +448,7 @@ export default function LiveAuctionPage() {
                     background:'linear-gradient(180deg,hsl(222,35%,12%),hsl(222,47%,6%))',
                   }}>
                   {currentPlayer.imageUrl
-                    ?<img src={currentPlayer.imageUrl} alt={currentPlayer.name} className="w-full h-full object-cover object-top"/>
+                    ?<img src={imgUrl(currentPlayer.imageUrl)} alt={currentPlayer.name} className="w-full h-full object-cover object-top"/>
                     :<div className="w-full h-full flex items-center justify-center" style={{background:'linear-gradient(135deg,hsl(222,35%,14%),hsl(222,47%,8%))'}}>
                       <span style={{fontSize:'72px'}}>{roleIcons[currentPlayer.role]}</span>
                     </div>}
@@ -510,7 +510,7 @@ export default function LiveAuctionPage() {
               <>
                 <div className="rounded-xl p-3" style={{background:`${myTeam.primaryColor}10`,border:`1px solid ${myTeam.primaryColor}30`}}>
                   <div className="flex items-center gap-2 mb-2">
-                    {myTeam.logo?<img src={myTeam.logo} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0"/>
+                    {myTeam.logo?<img src={imgUrl(myTeam.logo)} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0"/>
                       :<div className="w-8 h-8 rounded-lg flex items-center justify-center text-black font-bold flex-shrink-0" style={{background:myTeam.primaryColor,fontFamily:'Oswald,sans-serif',fontSize:'12px'}}>{myTeam.shortName?.slice(0,2)}</div>}
                     <div>
                       <div className="text-foreground text-sm font-bold" style={{fontFamily:'Rajdhani,sans-serif'}}>{myTeam.name}</div>

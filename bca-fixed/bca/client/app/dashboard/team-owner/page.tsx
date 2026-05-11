@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import AuthGuard from '@/components/shared/AuthGuard';
-import api from '@/lib/api';
+import api, { imgUrl } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { fmt, roleIcons, roleColors } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -790,7 +790,7 @@ export default function TeamOwnerDashboard() {
                       {/* Team header */}
                       <div className="flex items-center gap-4 mb-6">
                         {team.logo
-                          ? <img src={`${team.logo}`} alt="" className="w-18 h-18 rounded-2xl object-cover flex-shrink-0" style={{width:72,height:72}}/>
+                          ? <img src={imgUrl(team.logo)} alt="" className="w-18 h-18 rounded-2xl object-cover flex-shrink-0" style={{width:72,height:72}}/>
                           : <div className="rounded-2xl flex items-center justify-center text-black font-bold text-2xl flex-shrink-0"
                               style={{width:72,height:72,background:`linear-gradient(135deg,${team.primaryColor},${team.primaryColor}80)`,fontFamily:'Oswald,sans-serif'}}>
                               {team.shortName?.slice(0,2)}
@@ -908,7 +908,7 @@ export default function TeamOwnerDashboard() {
                           )}
                           {editTeam?.logo && !tLogo && (
                             <div className="mt-2">
-                              <img src={editTeam.logo} alt="Current" className="w-16 h-16 rounded-lg object-cover border border-primary/20"/>
+                              <img src={imgUrl(editTeam.logo)} alt="Current" className="w-16 h-16 rounded-lg object-cover border border-primary/20"/>
                               <p className="text-xs text-foreground mt-1">Current logo</p>
                             </div>
                           )}
@@ -1011,7 +1011,7 @@ export default function TeamOwnerDashboard() {
                           <div key={team._id} className="glass rounded-xl p-4 border border-primary/20">
                             <div className="flex items-center gap-3 mb-2">
                               {team.logo ? (
-                                <img src={team.logo} alt="" className="w-10 h-10 rounded-lg object-cover"/>
+                                <img src={imgUrl(team.logo)} alt="" className="w-10 h-10 rounded-lg object-cover"/>
                               ) : (
                                 <div className="w-10 h-10 rounded-lg flex items-center justify-center text-black font-bold text-sm" style={{background:team.primaryColor}}>
                                   {team.shortName?.slice(0,2)}
@@ -1104,7 +1104,7 @@ export default function TeamOwnerDashboard() {
                 <div className="flex-shrink-0">
                   {selTeam.logo ? (
                     <img
-                      src={selTeam.logo}
+                      src={imgUrl(selTeam.logo)}
                       alt="Team Logo"
                       className="w-12 h-12 rounded-lg object-cover"
                       onError={(e) => {
@@ -1228,7 +1228,7 @@ export default function TeamOwnerDashboard() {
                     <div key={p._id} className="bg-glass-premium rounded-2xl overflow-hidden hover:scale-[1.02] transition-all duration-300" style={{border:'1px solid rgba(255,255,255,0.06)'}}>
                       <div className="relative overflow-hidden bg-gradient-to-br from-slate-800 to-slate-900" style={{height:'144px'}}>
                         {p.imageUrl
-                          ? <img src={`${p.imageUrl}`} alt={p.name} className="w-full h-full object-cover object-top"/>
+                          ? <img src={imgUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover object-top"/>
                           : <div className="w-full h-full flex items-center justify-center text-4xl">{roleIcons[p.role]}</div>}
                         <div className="absolute inset-0" style={{background:'linear-gradient(to top,rgba(0,0,0,0.85),transparent 50%)'}}/>
                       </div>
