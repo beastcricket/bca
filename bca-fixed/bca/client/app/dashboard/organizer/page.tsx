@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import AuthGuard from '@/components/shared/AuthGuard';
-import api from '@/lib/api';
+import api, { imgUrl } from '@/lib/api';
 import { getSocket } from '@/lib/socket';
 import { fmt, roleColors, categoryColors, roleIcons } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -520,7 +520,7 @@ export default function OrganizerDashboard() {
                     {players.map(p => (
                       <div key={p._id} className="bg-glass-premium rounded-xl overflow-hidden group border-gold-subtle hover:border-gold transition-all">
                         <div className="relative overflow-hidden" style={{ height:144, background:'hsl(222 40% 10%)' }}>
-                          {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover object-top" onError={e => { e.currentTarget.style.display='none'; (e.currentTarget.nextElementSibling as HTMLElement)?.style.setProperty('display','flex'); }}/> : null}
+                          {p.imageUrl ? <img src={imgUrl(p.imageUrl)} alt={p.name} className="w-full h-full object-cover object-top" onError={e => { e.currentTarget.style.display='none'; (e.currentTarget.nextElementSibling as HTMLElement)?.style.setProperty('display','flex'); }}/> : null}
                           <div className="w-full h-full flex items-center justify-center text-4xl" style={{ display: p.imageUrl ? 'none' : 'flex' }}>{roleIcons?.[p.role] || '🏏'}</div>
                           <div className="absolute inset-0" style={{ background:'linear-gradient(to top,rgba(0,0,0,0.85),transparent 50%)' }}/>
                           <div className="absolute top-2 right-2">
@@ -612,7 +612,7 @@ export default function OrganizerDashboard() {
                         <div className="p-5">
                           <div className="flex items-center gap-3 mb-4">
                             {team.logo
-                              ? <img src={team.logo} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" onError={e => { e.currentTarget.style.display='none'; (e.currentTarget.nextElementSibling as HTMLElement)?.style.setProperty('display','flex'); }}/>
+                              ? <img src={imgUrl(team.logo)} alt="" className="w-12 h-12 rounded-xl object-cover flex-shrink-0" onError={e => { e.currentTarget.style.display='none'; (e.currentTarget.nextElementSibling as HTMLElement)?.style.setProperty('display','flex'); }}/>
                               : null}
                             <div className="w-12 h-12 rounded-xl flex items-center justify-center text-black font-bold font-heading flex-shrink-0" style={{ background:`linear-gradient(135deg,${team.primaryColor},${team.primaryColor}88)`, fontSize:18, display: team.logo ? 'none' : 'flex' }}>{team.shortName?.slice(0,2)}</div>
                             <div className="flex-1 min-w-0">
