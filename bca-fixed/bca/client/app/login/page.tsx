@@ -55,7 +55,25 @@ export default function LoginPage() {
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700 p-8 shadow-2xl">
           {error && (
             <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/50 text-red-400 text-sm">
-              {error}
+              <p>{error}</p>
+              {error.toLowerCase().includes('verif') && (
+                <p className="mt-2 text-xs text-red-300">
+                  Check your inbox for a verification email, or{' '}
+                  <Link href="/register" className="underline hover:text-red-200">
+                    register again
+                  </Link>{' '}
+                  to resend it.
+                </p>
+              )}
+              {error.toLowerCase().includes('password') && (
+                <p className="mt-2 text-xs text-red-300">
+                  Forgot your password?{' '}
+                  <Link href="/forgot-password" className="underline hover:text-red-200">
+                    Reset it here
+                  </Link>
+                  .
+                </p>
+              )}
             </div>
           )}
 
@@ -112,14 +130,17 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* ✅ FORGOT PASSWORD LINK - NEW ADDITION */}
-            <div className="text-right">
-              <Link 
-                href="/forgot-password" 
-                className="text-sm text-yellow-400 hover:text-yellow-300 transition-colors inline-flex items-center gap-1"
+            {/* Forgot Password — prominent full-width button */}
+            <div>
+              <Link
+                href="/forgot-password"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg
+                           border border-yellow-500/50 text-yellow-400 text-sm font-medium
+                           hover:bg-yellow-500/10 hover:border-yellow-400 hover:text-yellow-300
+                           transition-all duration-200"
               >
-                <FiLock size={14} />
-                Forgot Password?
+                <FiLock size={15} />
+                🔐 Forgot Password?
               </Link>
             </div>
 
