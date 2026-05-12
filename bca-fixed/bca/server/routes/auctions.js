@@ -111,6 +111,7 @@ router.get('/:id/players', optionalAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ✅ FIXED: Player creation route with status set to 'active'
 router.post('/:id/players', authenticate, authorize('organizer','admin'), upload.single('image'), async (req, res) => {
   try {
     const { name, role, category, nationality, age, basePrice, matches, runs, wickets, average, strikeRate, economy } = req.body;
@@ -130,11 +131,15 @@ router.post('/:id/players', authenticate, authorize('organizer','admin'), upload
     console.log('   Resolved imageUrl:', imageUrl || '(none)');
 
     const player = new Player({
-      auctionId: req.params.id, name, role, category,
+      auctionId: req.params.id, 
+      name, 
+      role, 
+      category,
       nationality: nationality || 'Indian',
       age: age ? parseInt(age) : undefined,
       basePrice: parseInt(basePrice),
       imageUrl,
+      status: 'active',  // ✅ CRITICAL FIX: Changed from 'pending' to 'active'
       stats: {
         matches:    parseInt(matches)    || 0,
         runs:       parseInt(runs)       || 0,
@@ -146,7 +151,7 @@ router.post('/:id/players', authenticate, authorize('organizer','admin'), upload
     });
 
     await player.save();
-    console.log('✅ Player saved to DB:', player._id, '| imageUrl:', player.imageUrl || '(none)');
+    console.log('✅ Player saved to DB:', player._id, '| Status:', player.status, '| imageUrl:', player.imageUrl || '(none)');
 
     res.status(201).json({ success: true, player });
   } catch (e) {
@@ -298,8 +303,6 @@ router.post('/:id/rtm', authenticate, authorize('team_owner'), async (req, res) 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-module.exports = router;
-
 // Get auction final results (all teams + their players)
 router.get('/:id/results', optionalAuth, async (req, res) => {
   try {
@@ -316,3 +319,5 @@ router.get('/:id/results', optionalAuth, async (req, res) => {
     res.json({ success: true, auction, teams: teamResults, players });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
+
+module.exports = router;
