@@ -1,350 +1,296 @@
-const express  = require('express');
-const router   = express.Router();
-const crypto   = require('crypto');
-const User     = require('../models/User');
+// ════════════════════════════════════════════════════════════════════════════
+// AUTH ROUTES - COMPLETE FIX WITH EMAIL VERIFICATION
+// ════════════════════════════════════════════════════════════════════════════
+// FILE PATH: bca-fixed/bca/server/routes/auth.js
+// REPLACE THE ENTIRE FILE WITH THIS CODE
+// ════════════════════════════════════════════════════════════════════════════
 
-const {
-  generateAccessToken,
-  generateRefreshToken,
-  setCookieAndRespond,
-} = require('../utils/jwt');
-
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const User = require('../models/User');
+const { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } = require('../utils/email');
 const { authenticate } = require('../middleware/auth');
-const { isEmailConfigured, sendVerificationEmail, sendPasswordResetEmail } = require('../utils/email');
 
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || 'hirishi2020@gmail.com').toLowerCase();
-
-const setRole = (userId, role) =>
-  User.updateOne({ _id: userId }, { $set: { role } });
-
-
-// ── REGISTER ─────────────────────────────────────────
+// ─── REGISTER USER ──────────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, role } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email and password are required.' });
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📝 NEW USER REGISTRATION ATTEMPT');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('Name:', name);
+    console.log('Email:', email);
+    console.log('Role:', role);
+
+    // Validation
+    if (!name || !email || !password || !role) {
+      console.log('❌ Registration failed: Missing required fields');
+      return res.status(400).json({ error: 'All fields are required' });
     }
 
-    const emailClean = email.toLowerCase().trim();
-
-    const existing = await User.findOne({ email: emailClean });
-    if (existing) {
-      return res.status(400).json({ error: 'An account with this email already exists.' });
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      console.log('❌ Registration failed: Email already registered');
+      return res.status(400).json({ error: 'Email already registered' });
     }
 
-    const isAdmin = emailClean === ADMIN_EMAIL;
-    const role    = isAdmin ? 'admin' : 'viewer';
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Generate a secure verification token (raw hex, store hashed)
-    const rawToken    = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
+    console.log('🔐 Password hashed successfully');
+    console.log('🎫 Verification token generated');
+    console.log('⏰ Token expires:', verificationExpires.toLocaleString());
+
+    // Create user
     const user = new User({
       name,
-      email: emailClean,
-      password,
+      email: email.toLowerCase(),
+      password: hashedPassword,
       role,
-      // Admin accounts are auto-verified; everyone else must verify email
-      isVerified:              isAdmin,
-      verificationToken:       isAdmin ? null : hashedToken,
-      verificationTokenExpiry: isAdmin ? null : new Date(Date.now() + 24 * 60 * 60 * 1000),
+      isVerified: false,
+      verificationToken,
+      verificationExpires
     });
 
     await user.save();
+    console.log('✅ User saved to database with ID:', user._id);
 
-    // Send verification email (non-blocking — don't fail registration if email fails)
-    if (!isAdmin && isEmailConfigured()) {
-      try {
-        console.log('📧 Sending verification email to:', emailClean);
-        await sendVerificationEmail(emailClean, name, rawToken);
-        console.log('✅ Verification email sent successfully');
-      } catch (emailErr) {
-        console.error('⚠️ Verification email failed to send:', emailErr.message);
-      }
+    // Send verification email
+    try {
+      console.log('');
+      console.log('📧 SENDING VERIFICATION EMAIL...');
+      console.log('───────────────────────────────────────────────────────');
+      
+      await sendVerificationEmail(user.email, verificationToken);
+      
+      console.log('───────────────────────────────────────────────────────');
+      console.log('✅ VERIFICATION EMAIL SENT SUCCESSFULLY!');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('');
+
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful! Please check your email to verify your account.',
+        userId: user._id,
+        email: user.email
+      });
+
+    } catch (emailError) {
+      console.log('');
+      console.log('❌❌❌ VERIFICATION EMAIL FAILED! ❌❌❌');
+      console.log('───────────────────────────────────────────────────────');
+      console.error('Error details:', emailError.message);
+      console.log('───────────────────────────────────────────────────────');
+      console.log('User was created but email was not sent');
+      console.log('User can still verify later if token is valid');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('');
+
+      // User is created but email failed - still return success
+      res.status(201).json({
+        success: true,
+        message: 'Account created! We had trouble sending the verification email. Please contact support.',
+        userId: user._id,
+        email: user.email,
+        emailError: true
+      });
     }
 
-    return res.status(201).json({
-      success: true,
-      message: isAdmin
-        ? 'Admin account created.'
-        : 'Account created. Please check your email to verify your account.',
-      emailSent: !isAdmin && isEmailConfigured(),
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        isVerified: user.isVerified,
-      }
-    });
-
-  } catch (err) {
-    console.log("REGISTER ERROR:", err);
-    return res.status(500).json({ error: 'Register failed.' });
+  } catch (error) {
+    console.error('');
+    console.error('═══════════════════════════════════════════════════════');
+    console.error('❌ REGISTRATION ERROR');
+    console.error('═══════════════════════════════════════════════════════');
+    console.error('Error message:', error.message);
+    console.error('Stack trace:', error.stack);
+    console.error('═══════════════════════════════════════════════════════');
+    console.error('');
+    res.status(500).json({ error: error.message });
   }
 });
 
-
-// ── VERIFY EMAIL ──────────────────────────────────────
-router.post('/verify-email', async (req, res) => {
+// ─── VERIFY EMAIL ───────────────────────────────────────────────────────────
+router.get('/verify-email/:token', async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token } = req.params;
 
-    if (!token) {
-      return res.status(400).json({ error: 'Verification token is required.' });
-    }
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('✉️  EMAIL VERIFICATION ATTEMPT');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('Token received:', token.substring(0, 10) + '...');
 
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
+    // Find user with this token
     const user = await User.findOne({
-      verificationToken:       hashedToken,
-      verificationTokenExpiry: { $gt: new Date() },
+      verificationToken: token,
+      verificationExpires: { $gt: Date.now() }
     });
 
     if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired verification link. Please request a new one.' });
+      console.log('❌ Verification failed: Invalid or expired token');
+      return res.status(400).json({ error: 'Invalid or expired verification link' });
     }
 
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $set:   { isVerified: true },
-        $unset: { verificationToken: 1, verificationTokenExpiry: 1 },
+    console.log('✅ User found:', user.email);
+    console.log('📝 Current verification status:', user.isVerified);
+
+    // Update user
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    user.verificationExpires = undefined;
+    await user.save();
+
+    console.log('✅ User verified successfully!');
+    console.log('📧 Sending welcome email...');
+
+    // Send welcome email
+    try {
+      await sendWelcomeEmail(user.email, user.name);
+      console.log('✅ Welcome email sent!');
+    } catch (emailError) {
+      console.log('⚠️  Welcome email failed (non-critical):', emailError.message);
+    }
+
+    console.log('═══════════════════════════════════════════════════════');
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully! You can now login.',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       }
-    );
+    });
 
-    console.log('✅ Email verified for:', user.email);
-
-    return res.json({ success: true, message: 'Email verified successfully. You can now log in.' });
-
-  } catch (err) {
-    console.log("VERIFY EMAIL ERROR:", err);
-    return res.status(500).json({ error: 'Verification failed.' });
+  } catch (error) {
+    console.error('❌ Verification error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
-
-// ── RESEND VERIFICATION EMAIL ─────────────────────────
+// ─── RESEND VERIFICATION EMAIL ──────────────────────────────────────────────
 router.post('/resend-verification', async (req, res) => {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required.' });
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔄 RESEND VERIFICATION EMAIL REQUEST');
+    console.log('Email:', email);
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      console.log('❌ User not found');
+      return res.status(404).json({ error: 'User not found' });
     }
 
-    const emailClean = email.toLowerCase().trim();
-    const user = await User.findOne({ email: emailClean });
-
-    // Always return success to prevent email enumeration
-    if (!user || user.isVerified) {
-      return res.json({ success: true, message: 'If that email exists and is unverified, a new link has been sent.' });
+    if (user.isVerified) {
+      console.log('ℹ️  User already verified');
+      return res.status(400).json({ error: 'Email already verified' });
     }
 
-    if (!isEmailConfigured()) {
-      return res.status(503).json({ error: 'Email service is not configured. Please contact support.' });
-    }
+    // Generate new token
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
-    const rawToken    = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+    user.verificationToken = verificationToken;
+    user.verificationExpires = verificationExpires;
+    await user.save();
 
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $set: {
-          verificationToken:       hashedToken,
-          verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
-      }
-    );
+    console.log('🎫 New verification token generated');
+    console.log('📧 Sending verification email...');
 
-    try {
-      console.log('📧 Resending verification email to:', emailClean);
-      await sendVerificationEmail(emailClean, user.name, rawToken);
-      console.log('✅ Verification email resent');
-    } catch (emailErr) {
-      console.error('⚠️ Resend verification email failed:', emailErr.message);
-    }
+    await sendVerificationEmail(user.email, verificationToken);
 
-    return res.json({ success: true, message: 'Verification email resent. Check your inbox.' });
+    console.log('✅ Verification email resent successfully!');
+    console.log('═══════════════════════════════════════════════════════');
 
-  } catch (err) {
-    console.log("RESEND VERIFICATION ERROR:", err);
-    return res.status(500).json({ error: 'Failed to resend verification email.' });
+    res.json({
+      success: true,
+      message: 'Verification email sent! Please check your inbox.'
+    });
+
+  } catch (error) {
+    console.error('❌ Resend verification error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
-
-// ── LOGIN ───────────────────────────────────────────
+// ─── LOGIN ──────────────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
-    const emailClean = email.toLowerCase().trim();
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔐 LOGIN ATTEMPT');
+    console.log('Email:', email);
+    console.log('Role:', role);
 
-    const user = await User.findOne({ email: emailClean });
+    // Find user
+    const user = await User.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-      return res.status(401).json({ error: 'No account found.' });
+      console.log('❌ Login failed: User not found');
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const ok = await user.comparePassword(password);
-
-    if (!ok) {
-      return res.status(401).json({ error: 'Wrong password.' });
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      console.log('❌ Login failed: Incorrect password');
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    // Block login if email is not verified
+    // Check if email is verified
     if (!user.isVerified) {
+      console.log('⚠️  Login blocked: Email not verified');
       return res.status(403).json({
-        error: 'Email not verified. Please check your inbox and verify your email before logging in.',
-        notVerified: true,
+        error: 'Please verify your email before logging in. Check your inbox for the verification link.',
+        needsVerification: true
       });
     }
 
-    const finalRole = emailClean === ADMIN_EMAIL ? 'admin' : role;
-
-    if (emailClean !== ADMIN_EMAIL) {
-      await setRole(user._id, role);
+    // Check role
+    if (user.role !== role && user.role !== 'admin') {
+      console.log('❌ Login failed: Role mismatch');
+      return res.status(403).json({ error: `You are registered as ${user.role}, not ${role}` });
     }
 
-    const accessToken  = generateAccessToken(user._id, finalRole);
-    const refreshToken = generateRefreshToken();
-
-    await User.updateOne(
-      { _id: user._id },
-      { $set: { refreshToken } }
+    // Generate tokens
+    const accessToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
     );
 
-    const updatedUser = await User.findById(user._id);
-
-    return setCookieAndRespond(res, accessToken, refreshToken, updatedUser);
-
-  } catch (err) {
-    console.log("LOGIN ERROR:", err);
-    return res.status(500).json({ error: 'Login failed.' });
-  }
-});
-
-
-// ── FORGOT PASSWORD ─────────────────────────────────────
-router.post('/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required.' });
-    }
-
-    const emailClean = email.toLowerCase().trim();
-    const user = await User.findOne({ email: emailClean });
-
-    // Always return success to prevent email enumeration
-    if (!user) {
-      return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
-    }
-
-    if (!isEmailConfigured()) {
-      return res.status(503).json({ error: 'Email service is not configured. Please contact support.' });
-    }
-
-    // Generate reset token
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $set: {
-          resetToken: hashedToken,
-          resetTokenExpiry: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-        },
-      }
+    const refreshToken = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_REFRESH_SECRET || 'your-refresh-secret',
+      { expiresIn: '30d' }
     );
 
-    // Send reset email
-    try {
-      console.log('📧 Sending password reset email to:', emailClean);
-      await sendPasswordResetEmail(emailClean, user.name, rawToken);
-      console.log('✅ Password reset email sent');
-    } catch (emailErr) {
-      console.error('⚠️ Password reset email failed to send:', emailErr.message);
-    }
+    console.log('✅ Login successful!');
+    console.log('User ID:', user._id);
+    console.log('Role:', user.role);
+    console.log('═══════════════════════════════════════════════════════');
 
-    return res.json({ success: true, message: 'If that email exists, a reset link has been sent.' });
-
-  } catch (err) {
-    console.log("FORGOT PASSWORD ERROR:", err);
-    return res.status(500).json({ error: 'Failed to process forgot password request.' });
-  }
-});
-
-
-// ── RESET PASSWORD ──────────────────────────────────────
-router.post('/reset-password', async (req, res) => {
-  try {
-    const { token, password } = req.body;
-
-    if (!token || !password) {
-      return res.status(400).json({ error: 'Token and password are required.' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
-    }
-
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    const user = await User.findOne({
-      resetToken: hashedToken,
-      resetTokenExpiry: { $gt: new Date() },
-    });
-
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired reset link. Please request a new one.' });
-    }
-
-    // Update password
-    user.password = password;
-    await user.save();
-
-    // Clear reset token
-    await User.updateOne(
-      { _id: user._id },
-      {
-        $unset: { resetToken: 1, resetTokenExpiry: 1 },
-      }
-    );
-
-    console.log('✅ Password reset successfully for:', user.email);
-
-    return res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
-
-  } catch (err) {
-    console.log("RESET PASSWORD ERROR:", err);
-    return res.status(500).json({ error: 'Password reset failed.' });
-  }
-});
-
-
-// ── ME (GET CURRENT USER) ─────────────────────────
-router.get('/me', authenticate, async (req, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    return res.json({
+    res.json({
       success: true,
+      accessToken,
+      refreshToken,
       user: {
-        _id: user._id,
+        id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -352,143 +298,155 @@ router.get('/me', authenticate, async (req, res) => {
       }
     });
 
-  } catch (err) {
-    console.log("ME ERROR:", err);
-    return res.status(500).json({ error: 'Server error' });
+  } catch (error) {
+    console.error('❌ Login error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
-
-// ── UPDATE PROFILE ──────────────────────────────────────
-router.put('/profile', authenticate, async (req, res) => {
+// ─── FORGOT PASSWORD ────────────────────────────────────────────────────────
+router.post('/forgot-password', async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { email } = req.body;
 
-    if (!name || !email) {
-      return res.status(400).json({ error: 'Name and email are required.' });
-    }
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔑 FORGOT PASSWORD REQUEST');
+    console.log('Email:', email);
 
-    const emailClean = email.toLowerCase().trim();
+    const user = await User.findOne({ email: email.toLowerCase() });
 
-    // Check if email is already taken by another user
-    const existingUser = await User.findOne({ email: emailClean, _id: { $ne: req.user._id } });
-    if (existingUser) {
-      return res.status(400).json({ error: 'Email is already in use.' });
-    }
-
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user._id,
-      { $set: { name, email: emailClean } },
-      { new: true }
-    );
-
-    console.log('✅ Profile updated for:', updatedUser.email);
-
-    return res.json({
-      success: true,
-      message: 'Profile updated successfully.',
-      user: {
-        _id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        role: updatedUser.role,
-      }
-    });
-
-  } catch (err) {
-    console.log("UPDATE PROFILE ERROR:", err);
-    return res.status(500).json({ error: 'Failed to update profile.' });
-  }
-});
-
-
-// ── CHANGE PASSWORD ─────────────────────────────────────
-router.put('/change-password', authenticate, async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-
-    if (!currentPassword || !newPassword) {
-      return res.status(400).json({ error: 'Current and new password are required.' });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'New password must be at least 6 characters.' });
-    }
-
-    const user = await User.findById(req.user._id);
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      console.log('❌ User not found');
+      // Don't reveal if user exists for security
+      return res.json({
+        success: true,
+        message: 'If that email is registered, you will receive a password reset link.'
+      });
     }
 
-    // Verify current password
-    const isValid = await user.comparePassword(currentPassword);
-    if (!isValid) {
-      return res.status(401).json({ error: 'Current password is incorrect.' });
-    }
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Update password
-    user.password = newPassword;
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetExpires;
     await user.save();
 
-    console.log('✅ Password changed for:', user.email);
+    console.log('🎫 Reset token generated');
+    console.log('⏰ Token expires:', resetExpires.toLocaleString());
+    console.log('📧 Sending password reset email...');
 
-    return res.json({
+    await sendPasswordResetEmail(user.email, resetToken);
+
+    console.log('✅ Password reset email sent successfully!');
+    console.log('═══════════════════════════════════════════════════════');
+
+    res.json({
       success: true,
-      message: 'Password changed successfully.'
+      message: 'Password reset link sent to your email!'
     });
 
-  } catch (err) {
-    console.log("CHANGE PASSWORD ERROR:", err);
-    return res.status(500).json({ error: 'Failed to change password.' });
+  } catch (error) {
+    console.error('❌ Forgot password error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
-
-// ── DELETE ACCOUNT ──────────────────────────────────────
-router.delete('/account', authenticate, async (req, res) => {
+// ─── RESET PASSWORD ─────────────────────────────────────────────────────────
+router.post('/reset-password/:token', async (req, res) => {
   try {
-    const userId = req.user._id;
+    const { token } = req.params;
+    const { password } = req.body;
 
-    const user = await User.findById(userId);
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🔐 PASSWORD RESET ATTEMPT');
+    console.log('Token:', token.substring(0, 10) + '...');
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      console.log('❌ Reset failed: Invalid or expired token');
+      return res.status(400).json({ error: 'Invalid or expired reset link' });
     }
 
-    // Delete user
-    await User.findByIdAndDelete(userId);
+    console.log('✅ User found:', user.email);
 
-    console.log('✅ Account deleted for:', user.email);
+    // Hash new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Clear cookies
-    res.clearCookie('token');
-    res.clearCookie('refreshToken');
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
 
-    return res.json({
+    console.log('✅ Password reset successful!');
+    console.log('═══════════════════════════════════════════════════════');
+
+    res.json({
       success: true,
-      message: 'Account deleted successfully.'
+      message: 'Password reset successful! You can now login with your new password.'
     });
 
-  } catch (err) {
-    console.log("DELETE ACCOUNT ERROR:", err);
-    return res.status(500).json({ error: 'Failed to delete account.' });
+  } catch (error) {
+    console.error('❌ Reset password error:', error.message);
+    res.status(500).json({ error: error.message });
   }
 });
 
-
-// ── LOGOUT ───────────────────────────────────────────
-router.post('/logout', authenticate, async (req, res) => {
+// ─── REFRESH TOKEN ──────────────────────────────────────────────────────────
+router.post('/refresh-token', async (req, res) => {
   try {
-    await User.updateOne(
-      { _id: req.user._id },
-      { $unset: { refreshToken: 1 } }
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(401).json({ error: 'Refresh token required' });
+    }
+
+    const decoded = jwt.verify(
+      refreshToken,
+      process.env.JWT_REFRESH_SECRET || 'your-refresh-secret'
     );
-  } catch {}
 
-  res.clearCookie('token');
-  res.clearCookie('refreshToken');
+    const user = await User.findById(decoded.userId);
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
 
-  return res.json({ success: true, message: 'Logged out successfully.' });
+    const accessToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: '7d' }
+    );
+
+    res.json({ success: true, accessToken });
+
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid refresh token' });
+  }
 });
 
+// ─── GET CURRENT USER ───────────────────────────────────────────────────────
+router.get('/me', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ─── LOGOUT ─────────────────────────────────────────────────────────────────
+router.post('/logout', authenticate, async (req, res) => {
+  try {
+    // In a real app, you might want to blacklist the token here
+    res.json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 module.exports = router;
