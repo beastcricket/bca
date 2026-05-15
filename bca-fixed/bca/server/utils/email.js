@@ -10,46 +10,54 @@ const nodemailer = require('nodemailer');
 // ─── Gmail SMTP Configuration ───────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // Use TLS
+  port: 465,
+  secure: true, // Use SSL
   auth: {
     user: 'beastcricketofficialauction@gmail.com',
-    pass: 'ptlhgrgnxssmfaej', // Your app password without spaces
-  },
-  tls: {
-    rejectUnauthorized: false // Accept self-signed certificates
+    pass: 'gdgzafbzoyjmgrxx', // Gmail App Password (16 chars, no spaces)
   },
   debug: true, // Enable debug logs
   logger: true // Enable logger
 });
 
-// ─── Verify SMTP Connection on Startup ──────────────────────────────────────
-transporter.verify(function(error, success) {
-  if (error) {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('❌ EMAIL SMTP VERIFICATION FAILED!');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('Error:', error.message);
-    console.log('');
-    console.log('TROUBLESHOOTING:');
-    console.log('1. Check your Gmail App Password is correct');
-    console.log('2. Ensure 2-Step Verification is enabled on Gmail');
-    console.log('3. Try regenerating the App Password');
-    console.log('4. Check if Less Secure Apps is OFF (we use App Password)');
-    console.log('═══════════════════════════════════════════════════════');
-  } else {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('✅ EMAIL SMTP CONNECTION VERIFIED SUCCESSFULLY!');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('📧 Email service is ready to send messages');
-    console.log('📤 From: beastcricketofficialauction@gmail.com');
-    console.log('🔐 Using Gmail App Password authentication');
-    console.log('═══════════════════════════════════════════════════════');
-  }
-});
+// ─── Verify Transporter (callable, returns a Promise) ───────────────────────
+function verifyTransporter() {
+  return new Promise((resolve, reject) => {
+    transporter.verify(function(error, success) {
+      if (error) {
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('❌ EMAIL SMTP VERIFICATION FAILED!');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('Error:', error.message);
+        console.log('');
+        console.log('TROUBLESHOOTING:');
+        console.log('1. Check your Gmail App Password is correct');
+        console.log('2. Ensure 2-Step Verification is enabled on Gmail');
+        console.log('3. Try regenerating the App Password');
+        console.log('4. Check if Less Secure Apps is OFF (we use App Password)');
+        console.log('═══════════════════════════════════════════════════════');
+        reject(error);
+      } else {
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('✅ EMAIL SMTP CONNECTION VERIFIED SUCCESSFULLY!');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('📧 Email service is ready to send messages');
+        console.log('📤 From: beastcricketofficialauction@gmail.com');
+        console.log('🔐 Using Gmail App Password authentication (port 465 SSL)');
+        console.log('═══════════════════════════════════════════════════════');
+        resolve(true);
+      }
+    });
+  });
+}
+
+// ─── Check if email is configured ───────────────────────────────────────────
+function isEmailConfigured() {
+  return true; // Gmail credentials are hardcoded and verified
+}
 
 // ─── Send Verification Email ────────────────────────────────────────────────
-async function sendVerificationEmail(to, token) {
+async function sendVerificationEmail(to, name, token) {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
   const verificationLink = `${frontendUrl}/verify-email?token=${token}`;
 
@@ -418,5 +426,7 @@ module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendWelcomeEmail,
+  verifyTransporter,
+  isEmailConfigured,
   transporter
 };
