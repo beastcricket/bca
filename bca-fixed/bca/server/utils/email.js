@@ -6,7 +6,7 @@ const nodemailer = require('nodemailer');
 
 // ─── Gmail SMTP Configuration ───────────────────────────────────────────────
 const EMAIL_USER = 'beastcricketofficialauction@gmail.com';
-const EMAIL_PASS = 'gdgzafbzoyjmgrxx'; // 16-char Gmail App Password
+const EMAIL_PASS = 'gdgz afbz oyjm grxx'; // Gmail App Password (WITH spaces — required by Gmail)
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
@@ -44,7 +44,7 @@ async function verifyTransporter() {
         console.log('   Code    :', error.code);
         console.log('');
         console.log('TROUBLESHOOTING:');
-        console.log('  1. Confirm the Gmail App Password is exactly 16 chars: gdgzafbzoyjmgrxx');
+        console.log('  1. Confirm the Gmail App Password includes spaces: gdgz afbz oyjm grxx');
         console.log('  2. Ensure 2-Step Verification is enabled on the Gmail account');
         console.log('  3. Regenerate the App Password if needed (Google Account → Security → App Passwords)');
         console.log('  4. Make sure "Less Secure Apps" is OFF — we use App Password, not account password');
