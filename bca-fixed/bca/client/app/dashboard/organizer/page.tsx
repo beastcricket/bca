@@ -33,6 +33,7 @@ export default function OrganizerDashboard() {
   const [pImgPreview, setPImgPreview] = useState<string>('');
   const [tLogo, setTLogo] = useState<File|null>(null);
   const [tLogoPreview, setTLogoPreview] = useState<string>('');
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     console.log('🔍 Debug Info:');
@@ -113,7 +114,13 @@ export default function OrganizerDashboard() {
       s.on('bidUpdate', () => fetchTeams());
       s.on('playerSold', (d: any) => { if (d.teams) setTeams(d.teams); fetchPlayers(); });
       s.on('teamJoined', (d: any) => { if (d.teams) setTeams(d.teams); else fetchTeams(); toast.success('A team just joined!'); });
-      return () => { s.off('bidUpdate'); s.off('playerSold'); s.off('teamJoined'); };
+      s.on('playerRegistered', (d: any) => {
+        if (d.player) {
+          setPlayers(prev => [...prev, d.player]);
+          toast.success(`🏏 ${d.player.name} just registered!`, { duration: 4000 });
+        }
+      });
+      return () => { s.off('bidUpdate'); s.off('playerSold'); s.off('teamJoined'); s.off('playerRegistered'); };
     } catch (err) {
       console.error('❌ Socket connection error:', err);
     }
@@ -242,6 +249,20 @@ export default function OrganizerDashboard() {
     setEditTeam(team);
     setTForm({ name:team.name, shortName:team.shortName, ownerName:team.ownerName||'', city:team.city||'', primaryColor:team.primaryColor||'#f59e0b', maxPlayers:String(team.maxPlayers||15) });
     setShowTF(true);
+  };
+
+  const getRegLink = (auctionId: string) => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/auctions/${auctionId}/register-player`;
+  };
+
+  const copyRegLink = (auctionId: string) => {
+    const link = getRegLink(auctionId);
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedLink(true);
+      toast.success('Registration link copied!');
+      setTimeout(() => setCopiedLink(false), 2500);
+    });
   };
 
   const INP = "input-beast";
@@ -375,6 +396,22 @@ export default function OrganizerDashboard() {
                             <button onClick={() => { navigator.clipboard.writeText(a.joinCode); toast.success(`Copied: ${a.joinCode}`); }}
                               className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider text-primary hover:bg-primary/10 transition-all border border-primary/20">📋 Copy</button>
                           </div>
+                          {/* Share Player Registration Link */}
+                          <div className="rounded-lg px-3 py-2.5 mb-3" style={{ background:'hsla(210,100%,55%,0.06)', border:'1px solid hsla(210,100%,55%,0.2)' }}>
+                            <div className="text-[9px] font-heading uppercase tracking-widest mb-1.5" style={{ color:'hsl(210 100% 65%)' }}>🔗 Player Registration Link</div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 text-[9px] font-display text-muted-foreground truncate" style={{ fontFamily:'monospace' }}>
+                                /auctions/{a._id}/register-player
+                              </div>
+                              <button
+                                onClick={() => copyRegLink(a._id)}
+                                className="flex-shrink-0 px-2.5 py-1 rounded text-[9px] font-heading uppercase tracking-wider transition-all"
+                                style={{ background:'hsla(210,100%,55%,0.15)', border:'1px solid hsla(210,100%,55%,0.3)', color:'hsl(210 100% 65%)' }}
+                              >
+                                {copiedLink ? '✓ Copied' : '📋 Copy'}
+                              </button>
+                            </div>
+                          </div>
                           <div className="flex gap-2">
                             <button onClick={() => { setSel(a); setTab('players'); }} className="flex-1 py-2 rounded-lg text-[10px] font-heading uppercase tracking-wider transition-all" style={{ background:'hsla(45,100%,51%,0.1)', border:'1px solid hsla(45,100%,51%,0.25)', color:'hsl(45 100% 51%)' }}>⚙️ Manage</button>
                             <Link href={`/auctions/${a._id}`} className="flex-1 py-2 rounded-lg text-[10px] font-heading uppercase tracking-wider text-center transition-all" style={{ background:'hsla(142,70%,45%,0.1)', border:'1px solid hsla(142,70%,45%,0.25)', color:'hsl(142 70% 55%)' }}>🔴 Live</Link>
@@ -455,7 +492,19 @@ export default function OrganizerDashboard() {
                     <h2 className="font-heading text-4xl uppercase tracking-[0.12em] text-foreground">Manage <span className="text-gradient-gold">Players</span></h2>
                     {sel && <p className="font-display text-muted-foreground text-sm mt-0.5">{sel.name} · {players.length} players</p>}
                   </div>
-                  {sel && <button onClick={() => setShowPF(v=>!v)} className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all">{showPF?'✕ Cancel':'+ Add Player'}</button>}
+                  {sel && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => copyRegLink(sel._id)}
+                        className="px-4 py-2.5 rounded-lg font-heading uppercase tracking-wider text-xs transition-all hover:scale-[1.02]"
+                        style={{ background:'hsla(210,100%,55%,0.1)', border:'1px solid hsla(210,100%,55%,0.3)', color:'hsl(210 100% 65%)' }}
+                        title={getRegLink(sel._id)}
+                      >
+                        🔗 {copiedLink ? 'Copied!' : 'Share Reg Link'}
+                      </button>
+                      <button onClick={() => setShowPF(v=>!v)} className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all">{showPF?'✕ Cancel':'+ Add Player'}</button>
+                    </div>
+                  )}
                 </div>
 
                 {!sel && <div className="text-center py-20 text-muted-foreground font-display">Select an auction first from My Auctions</div>}
