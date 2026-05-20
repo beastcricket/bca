@@ -339,6 +339,10 @@ module.exports = (io) => {
       else socket.emit('bidError', { message: 'No leading bid to force sell' });
     });
 
+    // ── PLAYER REGISTERED (broadcast from REST route via io directly) ─────
+    // This handler is intentionally empty — the REST route emits directly.
+    // Kept here for documentation purposes.
+
     socket.on('disconnect', () => {
       // No cleanup needed — rooms are ephemeral per socket
     });
