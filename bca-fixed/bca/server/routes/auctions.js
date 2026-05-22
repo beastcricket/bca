@@ -53,6 +53,84 @@ console.log('══════════════════════�
 console.log('📂 Uploads directory configured:', uploadsDir);
 console.log('═══════════════════════════════════════════════════════');
 
+// ─── PUBLIC PLAYER REGISTRATION ROUTES ─────────────────────────────────────
+
+// GET /auctions/:id/register-player — public: verify auction exists, return info
+router.get('/:id/register-player', async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.id).select('name description date status');
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+    if (auction.status === 'completed') return res.status(400).json({ error: 'This auction has already completed' });
+    res.json({ success: true, auction });
+  } catch (e) {
+    console.error('❌ Register-player GET error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /auctions/:id/register-player — public: register a player via shareable link
+router.post('/:id/register-player', upload.single('image'), async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.id);
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+    if (auction.status === 'completed') return res.status(400).json({ error: 'This auction has already completed' });
+
+    const { name, role, category, nationality, age, basePrice, matches, runs, wickets, average, strikeRate } = req.body;
+
+    // Validate required fields
+    if (!name || name.trim().length < 2) return res.status(400).json({ error: 'Player name must be at least 2 characters' });
+    if (!role) return res.status(400).json({ error: 'Role is required' });
+    if (!category) return res.status(400).json({ error: 'Category is required' });
+    if (!basePrice || parseInt(basePrice) <= 0) return res.status(400).json({ error: 'Base price must be greater than 0' });
+
+    const validRoles = ['Batsman', 'Bowler', 'AllRounder', 'WicketKeeper', 'Other'];
+    const validCategories = ['Elite', 'Gold', 'Silver', 'Emerging'];
+    if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role' });
+    if (!validCategories.includes(category)) return res.status(400).json({ error: 'Invalid category' });
+
+    const imageUrl = req.file ? getImageUrl(req.file) : null;
+
+    const player = new Player({
+      auctionId: req.params.id,
+      name: name.trim(),
+      role,
+      category,
+      nationality: nationality || 'Indian',
+      age: age ? parseInt(age) : undefined,
+      basePrice: parseInt(basePrice),
+      imageUrl,
+      status: 'pending',
+      stats: {
+        matches:    parseInt(matches)    || 0,
+        runs:       parseInt(runs)       || 0,
+        wickets:    parseInt(wickets)    || 0,
+        average:    parseFloat(average)  || 0,
+        strikeRate: parseFloat(strikeRate) || 0,
+      },
+    });
+
+    await player.save();
+
+    console.log(`✅ Player registered via public link: ${player.name} (${player._id}) for auction ${req.params.id}`);
+
+    // Emit real-time event to organizer dashboard
+    try {
+      const io = require('../socket/io').getIO();
+      if (io) {
+        io.to(req.params.id).emit('playerRegistered', { player: player.toObject() });
+        console.log(`📡 Emitted playerRegistered event for auction ${req.params.id}`);
+      }
+    } catch (socketErr) {
+      console.warn('⚠️  Socket emit failed (non-critical):', socketErr.message);
+    }
+
+    res.status(201).json({ success: true, player: player.toObject() });
+  } catch (e) {
+    console.error('❌ Register-player POST error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── PUBLIC ROUTES ──────────────────────────────────────────────────────────
 
 // All auctions
