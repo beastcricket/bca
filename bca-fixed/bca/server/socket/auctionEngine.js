@@ -339,6 +339,12 @@ module.exports = (io) => {
       else socket.emit('bidError', { message: 'No leading bid to force sell' });
     });
 
+    // ── PLAYER REGISTERED (public registration form) ──────────────
+    // The HTTP POST /auctions/:id/register-player route emits this event
+    // directly via io.to(auctionId) after saving the player, so the
+    // organizer dashboard receives it in real-time without any extra
+    // socket handling needed here.
+
     socket.on('disconnect', () => {
       // No cleanup needed — rooms are ephemeral per socket
     });
