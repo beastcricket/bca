@@ -113,7 +113,13 @@ export default function OrganizerDashboard() {
       s.on('bidUpdate', () => fetchTeams());
       s.on('playerSold', (d: any) => { if (d.teams) setTeams(d.teams); fetchPlayers(); });
       s.on('teamJoined', (d: any) => { if (d.teams) setTeams(d.teams); else fetchTeams(); toast.success('A team just joined!'); });
-      return () => { s.off('bidUpdate'); s.off('playerSold'); s.off('teamJoined'); };
+      s.on('playerRegistered', (d: any) => {
+        if (d.player) {
+          setPlayers(prev => [...prev, d.player]);
+          toast.success(`🏏 ${d.player.name} just registered!`);
+        }
+      });
+      return () => { s.off('bidUpdate'); s.off('playerSold'); s.off('teamJoined'); s.off('playerRegistered'); };
     } catch (err) {
       console.error('❌ Socket connection error:', err);
     }
@@ -375,6 +381,27 @@ export default function OrganizerDashboard() {
                             <button onClick={() => { navigator.clipboard.writeText(a.joinCode); toast.success(`Copied: ${a.joinCode}`); }}
                               className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider text-primary hover:bg-primary/10 transition-all border border-primary/20">📋 Copy</button>
                           </div>
+                          {/* Player Registration Link */}
+                          <div className="rounded-lg px-4 py-2.5 mb-4" style={{ background:'hsla(142,70%,45%,0.08)', border:'1px solid hsla(142,70%,45%,0.2)' }}>
+                            <div className="text-[9px] font-heading uppercase tracking-widest mb-1.5" style={{ color:'hsl(142 70% 55%)' }}>Player Registration Link</div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 text-[10px] font-display text-muted-foreground truncate">/auctions/{a._id}/register-player</div>
+                              <button
+                                onClick={() => {
+                                  const url = `${window.location.origin}/auctions/${a._id}/register-player`;
+                                  navigator.clipboard.writeText(url);
+                                  toast.success('Registration link copied!');
+                                }}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-heading uppercase tracking-wider hover:opacity-80 transition-all border flex-shrink-0"
+                                style={{ background:'hsla(142,70%,45%,0.15)', border:'1px solid hsla(142,70%,45%,0.3)', color:'hsl(142 70% 55%)' }}
+                              >📋 Copy</button>
+                              <button
+                                onClick={() => window.open(`/auctions/${a._id}/register-player`, '_blank')}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-heading uppercase tracking-wider hover:opacity-80 transition-all border flex-shrink-0"
+                                style={{ background:'hsla(142,70%,45%,0.15)', border:'1px solid hsla(142,70%,45%,0.3)', color:'hsl(142 70% 55%)' }}
+                              >↗ Share</button>
+                            </div>
+                          </div>
                           <div className="flex gap-2">
                             <button onClick={() => { setSel(a); setTab('players'); }} className="flex-1 py-2 rounded-lg text-[10px] font-heading uppercase tracking-wider transition-all" style={{ background:'hsla(45,100%,51%,0.1)', border:'1px solid hsla(45,100%,51%,0.25)', color:'hsl(45 100% 51%)' }}>⚙️ Manage</button>
                             <Link href={`/auctions/${a._id}`} className="flex-1 py-2 rounded-lg text-[10px] font-heading uppercase tracking-wider text-center transition-all" style={{ background:'hsla(142,70%,45%,0.1)', border:'1px solid hsla(142,70%,45%,0.25)', color:'hsl(142 70% 55%)' }}>🔴 Live</Link>
@@ -459,6 +486,27 @@ export default function OrganizerDashboard() {
                 </div>
 
                 {!sel && <div className="text-center py-20 text-muted-foreground font-display">Select an auction first from My Auctions</div>}
+
+                {/* Registration Link Banner */}
+                {sel && (
+                  <div className="flex items-center gap-3 rounded-xl px-5 py-3 mb-5" style={{ background:'hsla(142,70%,45%,0.08)', border:'1px solid hsla(142,70%,45%,0.2)' }}>
+                    <span className="text-lg">🔗</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[10px] font-heading uppercase tracking-widest mb-0.5" style={{ color:'hsl(142 70% 55%)' }}>Player Registration Link</div>
+                      <div className="text-xs font-display text-muted-foreground truncate">{typeof window !== 'undefined' ? window.location.origin : ''}/auctions/{sel._id}/register-player</div>
+                    </div>
+                    <button
+                      onClick={() => { const url = `${window.location.origin}/auctions/${sel._id}/register-player`; navigator.clipboard.writeText(url); toast.success('Registration link copied!'); }}
+                      className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider flex-shrink-0 hover:opacity-80 transition-all border"
+                      style={{ background:'hsla(142,70%,45%,0.15)', border:'1px solid hsla(142,70%,45%,0.3)', color:'hsl(142 70% 55%)' }}
+                    >📋 Copy</button>
+                    <button
+                      onClick={() => window.open(`/auctions/${sel._id}/register-player`, '_blank')}
+                      className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider flex-shrink-0 hover:opacity-80 transition-all border"
+                      style={{ background:'hsla(142,70%,45%,0.15)', border:'1px solid hsla(142,70%,45%,0.3)', color:'hsl(142 70% 55%)' }}
+                    >↗ Open</button>
+                  </div>
+                )}
 
                 <AnimatePresence>
                   {showPF && sel && (

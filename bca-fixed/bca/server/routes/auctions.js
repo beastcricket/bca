@@ -428,6 +428,80 @@ router.post('/:id/rtm', authenticate, authorize('team_owner'), async (req, res) 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── PUBLIC PLAYER REGISTRATION ─────────────────────────────────────────────
+
+// GET /auctions/:id/register-player — verify auction exists (public)
+router.get('/:id/register-player', async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.id).select('name status date');
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+    res.json({ success: true, auction });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /auctions/:id/register-player — register player from public form (no auth)
+router.post('/:id/register-player', upload.single('image'), async (req, res) => {
+  try {
+    const auction = await Auction.findById(req.params.id);
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+
+    const { name, role, category, nationality, age, basePrice, matches, runs, wickets, average, strikeRate } = req.body;
+
+    // Validate required fields
+    if (!name || name.trim().length < 2) return res.status(400).json({ error: 'Player name must be at least 2 characters' });
+    const validRoles = ['Batsman', 'Bowler', 'AllRounder', 'WicketKeeper', 'Other'];
+    if (!role || !validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role' });
+    const validCategories = ['Elite', 'Gold', 'Silver', 'Emerging'];
+    if (!category || !validCategories.includes(category)) return res.status(400).json({ error: 'Invalid category' });
+    const parsedPrice = parseInt(basePrice);
+    if (!parsedPrice || parsedPrice <= 0) return res.status(400).json({ error: 'Base price must be greater than 0' });
+
+    const imageUrl = getImageUrl(req.file);
+
+    const player = new Player({
+      auctionId: req.params.id,
+      name: name.trim(),
+      role,
+      category,
+      nationality: nationality || 'Indian',
+      age: age ? parseInt(age) : undefined,
+      basePrice: parsedPrice,
+      imageUrl,
+      status: 'pending',
+      stats: {
+        matches:    parseInt(matches)    || 0,
+        runs:       parseInt(runs)       || 0,
+        wickets:    parseInt(wickets)    || 0,
+        average:    parseFloat(average)  || 0,
+        strikeRate: parseFloat(strikeRate) || 0,
+        economy:    0,
+      },
+    });
+
+    await player.save();
+
+    console.log(`✅ Player registered via public form: ${player.name} (${player._id}) for auction ${req.params.id}`);
+
+    // Emit playerRegistered WebSocket event to all organizers watching this auction
+    try {
+      const io = require('../socket/io').getIO();
+      if (io) {
+        io.to(req.params.id).emit('playerRegistered', { player: player.toObject() });
+        console.log(`📡 Emitted playerRegistered event for auction ${req.params.id}`);
+      }
+    } catch (e) {
+      console.warn('⚠️  Could not emit playerRegistered event:', e.message);
+    }
+
+    res.status(201).json({ success: true, player: player.toObject() });
+  } catch (e) {
+    console.error('❌ Register player error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── RESULTS ────────────────────────────────────────────────────────────────
 
 router.get('/:id/results', optionalAuth, async (req, res) => {
