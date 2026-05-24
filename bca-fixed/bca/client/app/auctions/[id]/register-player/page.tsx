@@ -147,7 +147,7 @@ export default function PlayerRegistrationPage() {
         formDataToSend.append('image', formData.image);
       }
 
-      const res = await fetch(`${API_URL}/api/auctions/${auctionId}/players`, {
+      const res = await fetch(`${API_URL}/api/auctions/${auctionId}/players/public-register`, {
         method: 'POST',
         body: formDataToSend,
       });
