@@ -247,6 +247,136 @@ router.post('/:id/players', authenticate, authorize('organizer','admin'), upload
       success: true, 
       player: player.toObject() // Send full player object with imageUrl
     });
+    // ════════════════════════════════════════════════════════════════════════════
+// ADD THIS CODE TO YOUR EXISTING auctions.js FILE
+// ════════════════════════════════════════════════════════════════════════════
+// FILE: bca-fixed/bca/server/routes/auctions.js
+// 
+// ADD THIS ROUTE AFTER THE EXISTING PLAYERS ROUTES (around line 250-260)
+// This is a PUBLIC endpoint that allows anyone to register players
+// ════════════════════════════════════════════════════════════════════════════
+
+// ✅ PUBLIC PLAYER REGISTRATION - No authentication required
+// This allows players to self-register via the shareable link
+router.post('/:id/players/public-register', upload.single('image'), async (req, res) => {
+  try {
+    const { name, role, category, nationality, age, basePrice, stats } = req.body;
+
+    console.log('');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🏏 PUBLIC PLAYER REGISTRATION');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('Auction ID:', req.params.id);
+    console.log('Player Name:', name);
+    console.log('Role:', role);
+    console.log('Category:', category);
+    console.log('Base Price:', basePrice);
+    console.log('───────────────────────────────────────────────────────');
+
+    // Verify auction exists and is not completed
+    const auction = await Auction.findById(req.params.id);
+    if (!auction) {
+      console.log('❌ Auction not found');
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+    
+    if (auction.status === 'completed') {
+      console.log('❌ Auction already completed');
+      return res.status(400).json({ error: 'Auction has ended. Player registration is closed.' });
+    }
+
+    // Handle image upload
+    let imageUrl = null;
+    
+    if (req.file) {
+      console.log('📸 IMAGE FILE RECEIVED:');
+      console.log('   ✓ Original name  :', req.file.originalname);
+      console.log('   ✓ Size           :', (req.file.size / 1024).toFixed(2), 'KB');
+      console.log('   ✓ Filename       :', req.file.filename);
+      
+      imageUrl = getImageUrl(req.file);
+      console.log('   ✓ Image URL      :', imageUrl);
+    } else {
+      console.log('📸 NO IMAGE UPLOADED');
+    }
+
+    console.log('───────────────────────────────────────────────────────');
+    console.log('💾 CREATING PLAYER...');
+
+    // Parse stats if they come as a JSON string
+    let parsedStats = {};
+    if (typeof stats === 'string') {
+      try {
+        parsedStats = JSON.parse(stats);
+      } catch (e) {
+        console.log('⚠️  Stats parsing failed, using defaults');
+      }
+    } else if (typeof stats === 'object') {
+      parsedStats = stats;
+    }
+
+    // Also handle individual stat fields from FormData
+    const matches = req.body['stats[matches]'] || parsedStats.matches || 0;
+    const runs = req.body['stats[runs]'] || parsedStats.runs || 0;
+    const wickets = req.body['stats[wickets]'] || parsedStats.wickets || 0;
+    const average = req.body['stats[average]'] || parsedStats.average || 0;
+    const strikeRate = req.body['stats[strikeRate]'] || parsedStats.strikeRate || 0;
+
+    // Create player
+    const player = new Player({
+      auctionId: req.params.id,
+      name: name.trim(),
+      role,
+      category,
+      nationality: nationality || 'Indian',
+      age: age ? parseInt(age) : undefined,
+      basePrice: parseInt(basePrice),
+      imageUrl: imageUrl,
+      status: 'active', // Set as active so they appear in auction
+      stats: {
+        matches: parseInt(matches) || 0,
+        runs: parseInt(runs) || 0,
+        wickets: parseInt(wickets) || 0,
+        average: parseFloat(average) || 0,
+        strikeRate: parseFloat(strikeRate) || 0,
+        economy: 0,
+      },
+    });
+
+    await player.save();
+
+    console.log('✅ PLAYER REGISTERED SUCCESSFULLY!');
+    console.log('   ✓ ID            :', player._id);
+    console.log('   ✓ Name          :', player.name);
+    console.log('   ✓ Status        :', player.status);
+    console.log('   ✓ Image URL     :', player.imageUrl || '(none)');
+    console.log('═══════════════════════════════════════════════════════');
+
+    // Emit socket event for real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.to(req.params.id).emit('playerRegistered', {
+        auctionId: req.params.id,
+        player: player.toObject()
+      });
+      console.log('📡 WebSocket event emitted: playerRegistered');
+    }
+
+    res.status(201).json({
+      success: true,
+      player: player.toObject(),
+      message: 'Player registered successfully!'
+    });
+
+  } catch (e) {
+    console.error('❌ PUBLIC REGISTRATION ERROR:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// END OF NEW CODE TO ADD
+// ════════════════════════════════════════════════════════════════════════════
 
   } catch (e) {
     console.error('');
