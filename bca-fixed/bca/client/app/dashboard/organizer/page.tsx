@@ -375,6 +375,21 @@ export default function OrganizerDashboard() {
                             <button onClick={() => { navigator.clipboard.writeText(a.joinCode); toast.success(`Copied: ${a.joinCode}`); }}
                               className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider text-primary hover:bg-primary/10 transition-all border border-primary/20">📋 Copy</button>
                           </div>
+                          {/* Player Registration Link */}
+                          <div className="flex items-center justify-between rounded-lg px-4 py-2.5 mb-4" style={{ background:'hsla(142,70%,45%,0.08)', border:'1px solid hsla(142,70%,45%,0.2)' }}>
+                            <div>
+                              <div className="text-green-400 text-[9px] font-heading uppercase tracking-widest">🏏 Player Registration</div>
+                              <div className="text-foreground font-display text-xs mt-1">Share this link with players</div>
+                            </div>
+                            <button onClick={() => { 
+                              const link = `${window.location.origin}/auctions/${a._id}/register-player`;
+                              navigator.clipboard.writeText(link); 
+                              toast.success('Registration link copied!'); 
+                            }}
+                              className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider text-green-400 hover:bg-green-500/10 transition-all border border-green-500/20">
+                              📋 Copy Link
+                            </button>
+                          </div>
                           <div className="flex gap-2">
                             <button onClick={() => { setSel(a); setTab('players'); }} className="flex-1 py-2 rounded-lg text-[10px] font-heading uppercase tracking-wider transition-all" style={{ background:'hsla(45,100%,51%,0.1)', border:'1px solid hsla(45,100%,51%,0.25)', color:'hsl(45 100% 51%)' }}>⚙️ Manage</button>
                             <Link href={`/auctions/${a._id}`} className="flex-1 py-2 rounded-lg text-[10px] font-heading uppercase tracking-wider text-center transition-all" style={{ background:'hsla(142,70%,45%,0.1)', border:'1px solid hsla(142,70%,45%,0.25)', color:'hsl(142 70% 55%)' }}>🔴 Live</Link>
