@@ -122,6 +122,7 @@ app.use('/uploads', express.static(uploadsDir, {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/auctions', require('./routes/auctions'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/players', require('./routes/players'));
 
 // ── Health check ────────────────────────
 app.get('/api/health', (req, res) => {
@@ -146,6 +147,7 @@ app.get('/', (req, res) => {
       auth: '/api/auth/*',
       auctions: '/api/auctions/*',
       admin: '/api/admin/*',
+      players: '/api/players/*',
     }
   });
 });
@@ -155,7 +157,7 @@ app.use((req, res) => {
   console.log('❌ 404:', req.method, req.url);
   res.status(404).json({ 
     error: `${req.method} ${req.url} not found`,
-    availableRoutes: ['/api/auth', '/api/auctions', '/api/admin']
+    availableRoutes: ['/api/auth', '/api/auctions', '/api/admin', '/api/players']
   });
 });
 
