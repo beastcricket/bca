@@ -472,6 +472,57 @@ export default function OrganizerDashboard() {
                   </div>
                   {sel && <button onClick={() => setShowPF(v=>!v)} className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all">{showPF?'✕ Cancel':'+ Add Player'}</button>}
                 </div>
+                {/* ✅ PLAYER REGISTRATION LINK - ADD THIS ENTIRE SECTION */}
+                {sel && (
+                  <div className="bg-glass-premium rounded-xl p-6 mb-6 border-gold-subtle">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
+                        🔗
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-heading text-lg uppercase tracking-wider text-foreground mb-2">
+                          Share Player Registration Link
+                        </h3>
+                        <p className="text-muted-foreground text-sm font-display mb-4">
+                          Copy and share this link with players so they can register themselves for {sel.name}
+                        </p>
+                        <div className="flex gap-3 flex-wrap">
+                          <div className="flex-1 min-w-[300px]">
+                            <div className="flex items-center gap-2 bg-secondary/30 rounded-lg px-4 py-3 border border-primary/20">
+                              <input 
+                                type="text" 
+                                readOnly 
+                                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/auctions/${sel._id}/register-player`}
+                                className="flex-1 bg-transparent text-foreground text-sm font-mono outline-none"
+                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                              />
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const link = `${window.location.origin}/auctions/${sel._id}/register-player`;
+                              navigator.clipboard.writeText(link);
+                              toast.success('Registration link copied! Share it with players.');
+                            }}
+                            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all"
+                          >
+                            📋 Copy Link
+                          </button>
+                          <button 
+                            onClick={() => {
+                              const link = `${window.location.origin}/auctions/${sel._id}/register-player`;
+                              window.open(link, '_blank');
+                            }}
+                            className="px-6 py-3 rounded-lg border border-primary/30 text-primary font-heading uppercase tracking-wider text-xs hover:bg-primary/10 transition-all"
+                          >
+                            👁️ Preview
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {/* ✅ END OF REGISTRATION LINK SECTION */}
 
                 {!sel && <div className="text-center py-20 text-muted-foreground font-display">Select an auction first from My Auctions</div>}
 
