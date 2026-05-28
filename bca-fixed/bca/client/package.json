@@ -8,6 +8,7 @@
     "socket.io-client": "^4.6.2", "axios": "^1.6.2",
     "react-hook-form": "^7.49.2", "framer-motion": "^11.0.3",
     "react-hot-toast": "^2.4.1", "lucide-react": "^0.358.0",
+    "react-icons": "^5.0.1",
     "clsx": "^2.1.0", "tailwind-merge": "^2.2.0",
     "canvas-confetti": "^1.9.2", "date-fns": "^3.3.1"
   },
