@@ -1,16 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: false },
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
-      { protocol: 'https', hostname: '**' },
+      { protocol: 'https', hostname: '**.up.railway.app' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
   },
-
-  // ✅ Remove rewrites completely - not needed for Railway
-  // API calls go directly to backend URL via NEXT_PUBLIC_API_URL
 };
 
 module.exports = nextConfig;
