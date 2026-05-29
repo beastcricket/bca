@@ -262,7 +262,7 @@ export default function OrganizerDashboard() {
 
   const INP = "input-beast";
   const LBL = "block text-[10px] font-heading uppercase tracking-wider text-muted-foreground mb-1.5";
-  const registrationLink = sel && origin ? `${origin}/auctions/${sel._id}/register-player` : '';
+  const registrationLink = sel ? `${origin || window.location.origin}/auctions/${sel._id}/register-player` : '';
 
   const PlayerFormFields = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
