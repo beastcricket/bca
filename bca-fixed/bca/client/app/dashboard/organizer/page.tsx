@@ -20,19 +20,24 @@ export default function OrganizerDashboard() {
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showPF, setShowPF] = useState(false);
+  const [showPF, setShowPF] = useState(true);
+  const [origin, setOrigin] = useState('');
   const [showTF, setShowTF] = useState(false);
   const [editAuction, setEditAuction] = useState<any>(null);
   const [editTeam, setEditTeam] = useState<any>(null);
   const [fetchError, setFetchError] = useState<string>('');
 
   const [aForm, setAForm] = useState({ name:'', description:'', date:'', bidTimer:'30', bidIncrement:'500000', totalPursePerTeam:'100000000', maxTeams:'10', rtmPerTeam:'2', rtmEnabled:true });
-  const [pForm, setPForm] = useState({ name:'', role:'Batsman', category:'Gold', nationality:'Indian', age:'', basePrice:'1000000', matches:'0', runs:'0', wickets:'0', average:'0', strikeRate:'0', economy:'0' });
+  const [pForm, setPForm] = useState({ name:'', role:'Batsman', category:'Gold', nationality:'Indian', age:'24', basePrice:'1000000', matches:'0', runs:'0', wickets:'0', average:'0', strikeRate:'0', economy:'0' });
   const [tForm, setTForm] = useState({ name:'', shortName:'', ownerName:'', city:'', primaryColor:'#f59e0b', maxPlayers:'15' });
   const [pImg, setPImg] = useState<File|null>(null);
   const [pImgPreview, setPImgPreview] = useState<string>('');
   const [tLogo, setTLogo] = useState<File|null>(null);
   const [tLogoPreview, setTLogoPreview] = useState<string>('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     console.log('🔍 Debug Info:');
@@ -113,7 +118,20 @@ export default function OrganizerDashboard() {
       s.on('bidUpdate', () => fetchTeams());
       s.on('playerSold', (d: any) => { if (d.teams) setTeams(d.teams); fetchPlayers(); });
       s.on('teamJoined', (d: any) => { if (d.teams) setTeams(d.teams); else fetchTeams(); toast.success('A team just joined!'); });
-      return () => { s.off('bidUpdate'); s.off('playerSold'); s.off('teamJoined'); };
+      s.on('playerRegistered', (d: any) => {
+        if (!d?.player || d.auctionId !== sel._id) return;
+        setPlayers(prev => {
+          if (prev.some(p => p._id === d.player._id)) return prev;
+          return [...prev, d.player];
+        });
+        toast.success(`🏏 ${d.player.name} just registered!`);
+      });
+      return () => {
+        s.off('bidUpdate');
+        s.off('playerSold');
+        s.off('teamJoined');
+        s.off('playerRegistered');
+      };
     } catch (err) {
       console.error('❌ Socket connection error:', err);
     }
@@ -136,6 +154,7 @@ export default function OrganizerDashboard() {
         toast.success('Auction created! 🏏');
       }
       setTab('players');
+      setShowPF(true);
       setAForm({ name:'', description:'', date:'', bidTimer:'30', bidIncrement:'500000', totalPursePerTeam:'100000000', maxTeams:'10', rtmPerTeam:'2', rtmEnabled:true });
     } catch (e: any) {
       console.error('❌ Save auction error:', e);
@@ -174,10 +193,9 @@ export default function OrganizerDashboard() {
       const r = await api.post(`/auctions/${sel._id}/players`, fd);
       setPlayers(p => [...p, r.data.player]);
       toast.success('Player added!');
-      setPForm({ name:'', role:'Batsman', category:'Gold', nationality:'Indian', age:'', basePrice:'1000000', matches:'0', runs:'0', wickets:'0', average:'0', strikeRate:'0', economy:'0' });
+      setPForm({ name:'', role:'Batsman', category:'Gold', nationality:'Indian', age:'24', basePrice:'1000000', matches:'0', runs:'0', wickets:'0', average:'0', strikeRate:'0', economy:'0' });
       setPImg(null);
       setPImgPreview('');
-      setShowPF(false);
     } catch (e: any) {
       console.error('❌ Add player error:', e);
       toast.error(e.response?.data?.error || 'Failed to add player');
@@ -246,6 +264,50 @@ export default function OrganizerDashboard() {
 
   const INP = "input-beast";
   const LBL = "block text-[10px] font-heading uppercase tracking-wider text-muted-foreground mb-1.5";
+  const registrationLink = sel && origin ? `${origin}/auctions/${sel._id}/register-player` : '';
+
+  const PlayerFormFields = () => (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+      <div className="col-span-2 md:col-span-1"><label className={LBL}>Name *</label><input value={pForm.name} onChange={e=>setPForm(p=>({...p,name:e.target.value}))} className={INP} placeholder="Player name" required/></div>
+      <div><label className={LBL}>Role *</label>
+        <select value={pForm.role} onChange={e=>setPForm(p=>({...p,role:e.target.value}))} className={INP} style={{ background:'hsl(222 30% 16%)' }}>
+          {['Batsman','Bowler','AllRounder','WicketKeeper','Other'].map(r=><option key={r} value={r} style={{ background:'hsl(222 30% 16%)' }}>{r}</option>)}
+        </select>
+      </div>
+      <div><label className={LBL}>Category *</label>
+        <select value={pForm.category} onChange={e=>setPForm(p=>({...p,category:e.target.value}))} className={INP} style={{ background:'hsl(222 30% 16%)' }}>
+          {['Elite','Gold','Silver','Emerging'].map(c=><option key={c} value={c} style={{ background:'hsl(222 30% 16%)' }}>{c}</option>)}
+        </select>
+      </div>
+      <div><label className={LBL}>Nationality</label><input value={pForm.nationality} onChange={e=>setPForm(p=>({...p,nationality:e.target.value}))} className={INP} placeholder="Indian"/></div>
+      <div><label className={LBL}>Age</label><input type="number" value={pForm.age} onChange={e=>setPForm(p=>({...p,age:e.target.value}))} className={INP} placeholder="24"/></div>
+      <div><label className={LBL}>Base Price (₹) *</label><input type="number" value={pForm.basePrice} onChange={e=>setPForm(p=>({...p,basePrice:e.target.value}))} className={INP} required/></div>
+      <div><label className={LBL}>Matches</label><input type="number" value={pForm.matches} onChange={e=>setPForm(p=>({...p,matches:e.target.value}))} className={INP}/></div>
+      <div><label className={LBL}>Runs</label><input type="number" value={pForm.runs} onChange={e=>setPForm(p=>({...p,runs:e.target.value}))} className={INP}/></div>
+      <div><label className={LBL}>Wickets</label><input type="number" value={pForm.wickets} onChange={e=>setPForm(p=>({...p,wickets:e.target.value}))} className={INP}/></div>
+      <div><label className={LBL}>Average</label><input type="number" step="0.01" value={pForm.average} onChange={e=>setPForm(p=>({...p,average:e.target.value}))} className={INP}/></div>
+      <div><label className={LBL}>Strike Rate</label><input type="number" step="0.01" value={pForm.strikeRate} onChange={e=>setPForm(p=>({...p,strikeRate:e.target.value}))} className={INP}/></div>
+      <div><label className={LBL}>Photo</label>
+        <input type="file" accept="image/*" onChange={e => {
+          const file = e.target.files?.[0] || null;
+          setPImg(file);
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = ev => setPImgPreview(ev.target?.result as string);
+            reader.readAsDataURL(file);
+          } else {
+            setPImgPreview('');
+          }
+        }}
+          className="w-full text-muted-foreground text-xs file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-heading file:text-xs cursor-pointer hover:file:bg-primary/20"/>
+        {pImgPreview && (
+          <div className="mt-2 rounded-lg overflow-hidden border border-primary/20" style={{ width: 80, height: 80 }}>
+            <img src={pImgPreview} alt="Preview" className="w-full h-full object-cover"/>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <AuthGuard roles={['organizer','admin']}>
@@ -470,116 +532,79 @@ export default function OrganizerDashboard() {
                     <h2 className="font-heading text-4xl uppercase tracking-[0.12em] text-foreground">Manage <span className="text-gradient-gold">Players</span></h2>
                     {sel && <p className="font-display text-muted-foreground text-sm mt-0.5">{sel.name} · {players.length} players</p>}
                   </div>
-                  {sel && <button onClick={() => setShowPF(v=>!v)} className="px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all">{showPF?'✕ Cancel':'+ Add Player'}</button>}
+                  {sel && (
+                    <button onClick={() => setShowPF(v=>!v)} className="px-5 py-2.5 rounded-lg border border-primary/30 text-primary font-heading uppercase tracking-wider text-xs hover:bg-primary/10 transition-all">
+                      {showPF ? '▲ Hide Form' : '▼ Show Form'}
+                    </button>
+                  )}
                 </div>
-                {/* ✅ PLAYER REGISTRATION LINK - ADD THIS ENTIRE SECTION */}
+
+                {!sel && <div className="text-center py-20 text-muted-foreground font-display">Select an auction first from My Auctions</div>}
+
                 {sel && (
-                  <div className="bg-glass-premium rounded-xl p-6 mb-6 border-gold-subtle">
-                    <div className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-2xl">
-                        🔗
+                  <>
+                    <div className="bg-glass-premium rounded-xl p-6 mb-6 gold-edge border-gold-subtle">
+                      <div className="flex items-center gap-3 mb-4">
+                        <img src="/beast-logo.png" alt="Beast" className="w-10 h-10 object-contain" style={{ filter:'drop-shadow(0 0 8px hsla(45,100%,51%,0.5))' }}/>
+                        <div>
+                          <h3 className="font-heading text-lg uppercase tracking-wider text-foreground">Player Registration</h3>
+                          <p className="text-muted-foreground text-sm font-display">Share the link — players register themselves · updates here instantly</p>
+                        </div>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-heading text-lg uppercase tracking-wider text-foreground mb-2">
-                          Share Player Registration Link
-                        </h3>
-                        <p className="text-muted-foreground text-sm font-display mb-4">
-                          Copy and share this link with players so they can register themselves for {sel.name}
-                        </p>
-                        <div className="flex gap-3 flex-wrap">
-                          <div className="flex-1 min-w-[300px]">
-                            <div className="flex items-center gap-2 bg-secondary/30 rounded-lg px-4 py-3 border border-primary/20">
-                              <input 
-                                type="text" 
-                                readOnly 
-                                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/auctions/${sel._id}/register-player`}
-                                className="flex-1 bg-transparent text-foreground text-sm font-mono outline-none"
-                                onClick={(e) => (e.target as HTMLInputElement).select()}
-                              />
-                            </div>
+                      <div className="flex gap-3 flex-wrap mb-2">
+                        <div className="flex-1 min-w-[280px]">
+                          <label className={LBL}>Shareable registration link</label>
+                          <div className="flex items-center gap-2 bg-secondary/30 rounded-lg px-4 py-3 border border-primary/20">
+                            <input
+                              type="text"
+                              readOnly
+                              value={registrationLink}
+                              className="flex-1 bg-transparent text-foreground text-sm font-mono outline-none"
+                              onClick={(e) => (e.target as HTMLInputElement).select()}
+                            />
                           </div>
-                          <button 
+                        </div>
+                        <div className="flex gap-2 items-end flex-wrap">
+                          <button
+                            type="button"
                             onClick={() => {
-                              const link = `${window.location.origin}/auctions/${sel._id}/register-player`;
-                              navigator.clipboard.writeText(link);
+                              if (!registrationLink) return;
+                              navigator.clipboard.writeText(registrationLink);
                               toast.success('Registration link copied! Share it with players.');
                             }}
                             className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all"
                           >
                             📋 Copy Link
                           </button>
-                          <button 
-                            onClick={() => {
-                              const link = `${window.location.origin}/auctions/${sel._id}/register-player`;
-                              window.open(link, '_blank');
-                            }}
+                          <button
+                            type="button"
+                            onClick={() => registrationLink && window.open(registrationLink, '_blank')}
                             className="px-6 py-3 rounded-lg border border-primary/30 text-primary font-heading uppercase tracking-wider text-xs hover:bg-primary/10 transition-all"
                           >
-                            👁️ Preview
+                            👁️ Open Form
                           </button>
                         </div>
                       </div>
                     </div>
-                  </div>
-                )}
-                {/* ✅ END OF REGISTRATION LINK SECTION */}
 
-                {!sel && <div className="text-center py-20 text-muted-foreground font-display">Select an auction first from My Auctions</div>}
-
-                <AnimatePresence>
-                  {showPF && sel && (
-                    <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }} className="overflow-hidden mb-6">
-                      <div className="bg-glass-premium rounded-xl p-6 gold-edge border-gold-subtle">
-                        <h3 className="font-heading text-xl uppercase tracking-wider text-foreground mb-5">Add Player</h3>
-                        <form onSubmit={addPlayer}>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-                            <div className="col-span-2 md:col-span-1"><label className={LBL}>Name *</label><input value={pForm.name} onChange={e=>setPForm(p=>({...p,name:e.target.value}))} className={INP} placeholder="Player name" required/></div>
-                            <div><label className={LBL}>Role *</label>
-                              <select value={pForm.role} onChange={e=>setPForm(p=>({...p,role:e.target.value}))} className={INP} style={{ background:'hsl(222 30% 16%)' }}>
-                                {['Batsman','Bowler','AllRounder','WicketKeeper','Other'].map(r=><option key={r} value={r} style={{ background:'hsl(222 30% 16%)' }}>{r}</option>)}
-                              </select>
-                            </div>
-                            <div><label className={LBL}>Category *</label>
-                              <select value={pForm.category} onChange={e=>setPForm(p=>({...p,category:e.target.value}))} className={INP} style={{ background:'hsl(222 30% 16%)' }}>
-                                {['Elite','Gold','Silver','Emerging'].map(c=><option key={c} value={c} style={{ background:'hsl(222 30% 16%)' }}>{c}</option>)}
-                              </select>
-                            </div>
-                            <div><label className={LBL}>Nationality</label><input value={pForm.nationality} onChange={e=>setPForm(p=>({...p,nationality:e.target.value}))} className={INP} placeholder="Indian"/></div>
-                            <div><label className={LBL}>Age</label><input type="number" value={pForm.age} onChange={e=>setPForm(p=>({...p,age:e.target.value}))} className={INP} placeholder="24"/></div>
-                            <div><label className={LBL}>Base Price (₹) *</label><input type="number" value={pForm.basePrice} onChange={e=>setPForm(p=>({...p,basePrice:e.target.value}))} className={INP} required/></div>
-                            <div><label className={LBL}>Matches</label><input type="number" value={pForm.matches} onChange={e=>setPForm(p=>({...p,matches:e.target.value}))} className={INP}/></div>
-                            <div><label className={LBL}>Runs</label><input type="number" value={pForm.runs} onChange={e=>setPForm(p=>({...p,runs:e.target.value}))} className={INP}/></div>
-                            <div><label className={LBL}>Wickets</label><input type="number" value={pForm.wickets} onChange={e=>setPForm(p=>({...p,wickets:e.target.value}))} className={INP}/></div>
-                            <div><label className={LBL}>Average</label><input type="number" step="0.01" value={pForm.average} onChange={e=>setPForm(p=>({...p,average:e.target.value}))} className={INP}/></div>
-                            <div><label className={LBL}>Strike Rate</label><input type="number" step="0.01" value={pForm.strikeRate} onChange={e=>setPForm(p=>({...p,strikeRate:e.target.value}))} className={INP}/></div>
-                            <div><label className={LBL}>Photo</label>
-                              <input type="file" accept="image/*" onChange={e => {
-                                const file = e.target.files?.[0] || null;
-                                setPImg(file);
-                                if (file) {
-                                  const reader = new FileReader();
-                                  reader.onload = ev => setPImgPreview(ev.target?.result as string);
-                                  reader.readAsDataURL(file);
-                                } else {
-                                  setPImgPreview('');
-                                }
-                              }}
-                                className="w-full text-muted-foreground text-xs file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-primary/10 file:text-primary file:font-heading file:text-xs cursor-pointer hover:file:bg-primary/20"/>
-                              {pImgPreview && (
-                                <div className="mt-2 rounded-lg overflow-hidden border border-primary/20" style={{ width: 80, height: 80 }}>
-                                  <img src={pImgPreview} alt="Preview" className="w-full h-full object-cover"/>
-                                </div>
-                              )}
-                            </div>
+                    <AnimatePresence>
+                      {showPF && (
+                        <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }} className="overflow-hidden mb-6">
+                          <div className="bg-glass-premium rounded-xl p-6 gold-edge border-gold-subtle">
+                            <h3 className="font-heading text-xl uppercase tracking-wider text-foreground mb-1">Add Player Manually</h3>
+                            <p className="text-muted-foreground text-xs font-display mb-5">Same fields as the shareable registration form</p>
+                            <form onSubmit={addPlayer}>
+                              <PlayerFormFields />
+                              <button type="submit" disabled={loading} className="px-7 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all disabled:opacity-50">
+                                {loading ? 'Adding...' : '+ Add Player'}
+                              </button>
+                            </form>
                           </div>
-                          <button type="submit" disabled={loading} className="px-7 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all disabled:opacity-50">
-                            {loading ? 'Adding...' : '+ Add Player'}
-                          </button>
-                        </form>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </>
+                )}
 
                 {sel && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -604,7 +629,7 @@ export default function OrganizerDashboard() {
                         </div>
                       </div>
                     ))}
-                    {players.length===0 && <div className="col-span-full text-center py-16 text-muted-foreground font-display">No players yet. Click + Add Player above.</div>}
+                    {players.length===0 && <div className="col-span-full text-center py-16 text-muted-foreground font-display">No players yet. Share the link above or add manually.</div>}
                   </div>
                 )}
               </motion.div>
