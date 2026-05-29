@@ -24,7 +24,7 @@
 1. Go to **https://railway.app** → Sign up with GitHub
 2. Click **New Project** → **Deploy from GitHub repo**
    - If you don't have GitHub: **New Project** → **Deploy from local** → upload the `bca/server` folder
-3. Set the **Root Directory** to `server` (if uploading whole project)
+3. Set the **Root Directory** to `server` (repo root: `client` for frontend, `server` for backend)
 4. Railway auto-detects Node.js and runs `node server.js`
 
 ### Set Environment Variables in Railway:
