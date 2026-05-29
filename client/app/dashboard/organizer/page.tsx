@@ -20,7 +20,6 @@ export default function OrganizerDashboard() {
   const [players, setPlayers] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showPF, setShowPF] = useState(true);
   const [origin, setOrigin] = useState('');
   const [showTF, setShowTF] = useState(false);
   const [editAuction, setEditAuction] = useState<any>(null);
@@ -154,7 +153,6 @@ export default function OrganizerDashboard() {
         toast.success('Auction created! 🏏');
       }
       setTab('players');
-      setShowPF(true);
       setAForm({ name:'', description:'', date:'', bidTimer:'30', bidIncrement:'500000', totalPursePerTeam:'100000000', maxTeams:'10', rtmPerTeam:'2', rtmEnabled:true });
     } catch (e: any) {
       console.error('❌ Save auction error:', e);
@@ -532,14 +530,17 @@ export default function OrganizerDashboard() {
                     <h2 className="font-heading text-4xl uppercase tracking-[0.12em] text-foreground">Manage <span className="text-gradient-gold">Players</span></h2>
                     {sel && <p className="font-display text-muted-foreground text-sm mt-0.5">{sel.name} · {players.length} players</p>}
                   </div>
-                  {sel && (
-                    <button onClick={() => setShowPF(v=>!v)} className="px-5 py-2.5 rounded-lg border border-primary/30 text-primary font-heading uppercase tracking-wider text-xs hover:bg-primary/10 transition-all">
-                      {showPF ? '▲ Hide Form' : '▼ Show Form'}
-                    </button>
-                  )}
                 </div>
 
-                {!sel && <div className="text-center py-20 text-muted-foreground font-display">Select an auction first from My Auctions</div>}
+                {!sel && (
+                  <div className="text-center py-20 bg-glass-navy rounded-xl border-gold-subtle">
+                    <div className="text-4xl mb-3">🏏</div>
+                    <p className="font-display text-muted-foreground mb-4">Create or select an auction to manage player registration</p>
+                    <button onClick={() => setTab('auctions')} className="px-6 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold">
+                      Go to My Auctions
+                    </button>
+                  </div>
+                )}
 
                 {sel && (
                   <>
@@ -587,22 +588,16 @@ export default function OrganizerDashboard() {
                       </div>
                     </div>
 
-                    <AnimatePresence>
-                      {showPF && (
-                        <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:'auto' }} exit={{ opacity:0, height:0 }} className="overflow-hidden mb-6">
-                          <div className="bg-glass-premium rounded-xl p-6 gold-edge border-gold-subtle">
-                            <h3 className="font-heading text-xl uppercase tracking-wider text-foreground mb-1">Add Player Manually</h3>
-                            <p className="text-muted-foreground text-xs font-display mb-5">Same fields as the shareable registration form</p>
-                            <form onSubmit={addPlayer}>
-                              <PlayerFormFields />
-                              <button type="submit" disabled={loading} className="px-7 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all disabled:opacity-50">
-                                {loading ? 'Adding...' : '+ Add Player'}
-                              </button>
-                            </form>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <div className="bg-glass-premium rounded-xl p-6 gold-edge border-gold-subtle mb-6">
+                      <h3 className="font-heading text-xl uppercase tracking-wider text-foreground mb-1">Add Player Manually</h3>
+                      <p className="text-muted-foreground text-xs font-display mb-5">Same fields as the shareable registration form below</p>
+                      <form onSubmit={addPlayer}>
+                        <PlayerFormFields />
+                        <button type="submit" disabled={loading} className="px-7 py-2.5 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all disabled:opacity-50">
+                          {loading ? 'Adding...' : '+ Add Player'}
+                        </button>
+                      </form>
+                    </div>
                   </>
                 )}
 
