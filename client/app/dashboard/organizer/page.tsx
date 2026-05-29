@@ -435,20 +435,40 @@ export default function OrganizerDashboard() {
                             <button onClick={() => { navigator.clipboard.writeText(a.joinCode); toast.success(`Copied: ${a.joinCode}`); }}
                               className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider text-primary hover:bg-primary/10 transition-all border border-primary/20">📋 Copy</button>
                           </div>
-                          {/* Player Registration Link */}
-                          <div className="flex items-center justify-between rounded-lg px-4 py-2.5 mb-4" style={{ background:'hsla(142,70%,45%,0.08)', border:'1px solid hsla(142,70%,45%,0.2)' }}>
-                            <div>
-                              <div className="text-green-400 text-[9px] font-heading uppercase tracking-widest">🏏 Player Registration</div>
-                              <div className="text-foreground font-display text-xs mt-1">Share this link with players</div>
+                          {/* Player Registration Link - PROMINENT */}
+                          <div className="rounded-xl p-4 mb-4" style={{ background:'linear-gradient(135deg,hsla(142,70%,45%,0.15),hsla(142,70%,45%,0.05)', border:'2px solid hsla(142,70%,45%,0.4)' }}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <div className="text-2xl">🏏</div>
+                                <div>
+                                  <div className="text-green-400 text-xs font-heading uppercase tracking-widest font-bold">Player Registration Form</div>
+                                  <div className="text-foreground font-display text-xs">Shareable link - Anyone can register</div>
+                                </div>
+                              </div>
                             </div>
-                            <button onClick={() => { 
-                              const link = `${window.location.origin}/auctions/${a._id}/register-player`;
-                              navigator.clipboard.writeText(link); 
-                              toast.success('Registration link copied!'); 
-                            }}
-                              className="px-3 py-1.5 rounded-lg text-[10px] font-heading uppercase tracking-wider text-green-400 hover:bg-green-500/10 transition-all border border-green-500/20">
-                              📋 Copy Link
-                            </button>
+                            <div className="flex items-center gap-2 bg-background/50 rounded-lg px-3 py-2 border border-green-500/30 mb-3">
+                              <input
+                                type="text"
+                                readOnly
+                                value={`${window.location.origin}/auctions/${a._id}/register-player`}
+                                className="flex-1 bg-transparent text-foreground text-xs font-mono outline-none"
+                                onClick={(e) => (e.target as HTMLInputElement).select()}
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => { 
+                                const link = `${window.location.origin}/auctions/${a._id}/register-player`;
+                                navigator.clipboard.writeText(link); 
+                                toast.success('Registration link copied! Share with players.'); 
+                              }}
+                                className="flex-1 px-4 py-2 rounded-lg bg-green-500 text-white font-heading uppercase tracking-wider text-xs hover:bg-green-600 transition-all font-bold">
+                                📋 Copy Link
+                              </button>
+                              <button onClick={() => window.open(`${window.location.origin}/auctions/${a._id}/register-player`, '_blank')}
+                                className="flex-1 px-4 py-2 rounded-lg border-2 border-green-500 text-green-400 font-heading uppercase tracking-wider text-xs hover:bg-green-500/10 transition-all font-bold">
+                                �️ Open Form
+                              </button>
+                            </div>
                           </div>
                           <div className="flex gap-2">
                             <button onClick={() => { setSel(a); setTab('players'); }} className="flex-1 py-2 rounded-lg text-[10px] font-heading uppercase tracking-wider transition-all" style={{ background:'hsla(45,100%,51%,0.1)', border:'1px solid hsla(45,100%,51%,0.25)', color:'hsl(45 100% 51%)' }}>⚙️ Manage</button>
@@ -544,18 +564,18 @@ export default function OrganizerDashboard() {
 
                 {sel && (
                   <>
-                    <div className="bg-glass-premium rounded-xl p-6 mb-6 gold-edge border-gold-subtle">
+                    <div className="rounded-xl p-6 mb-6" style={{ background:'linear-gradient(135deg,hsla(142,70%,45%,0.2),hsla(142,70%,45%,0.08))', border:'2px solid hsla(142,70%,45%,0.5)' }}>
                       <div className="flex items-center gap-3 mb-4">
-                        <img src="/beast-logo.png" alt="Beast" className="w-10 h-10 object-contain" style={{ filter:'drop-shadow(0 0 8px hsla(45,100%,51%,0.5))' }}/>
+                        <div className="text-4xl">🏏</div>
                         <div>
-                          <h3 className="font-heading text-lg uppercase tracking-wider text-foreground">Player Registration</h3>
-                          <p className="text-muted-foreground text-sm font-display">Share the link — players register themselves · updates here instantly</p>
+                          <h3 className="font-heading text-xl uppercase tracking-wider text-green-400 font-bold">Player Registration Form</h3>
+                          <p className="text-foreground text-sm font-display">Share this link - ANYONE can register without login</p>
                         </div>
                       </div>
-                      <div className="flex gap-3 flex-wrap mb-2">
+                      <div className="flex gap-3 flex-wrap mb-3">
                         <div className="flex-1 min-w-[280px]">
-                          <label className={LBL}>Shareable registration link</label>
-                          <div className="flex items-center gap-2 bg-secondary/30 rounded-lg px-4 py-3 border border-primary/20">
+                          <label className={LBL} style={{ color:'hsl(142 70% 55%)' }}>SHAREABLE REGISTRATION LINK</label>
+                          <div className="flex items-center gap-2 bg-background/60 rounded-lg px-4 py-3 border-2 border-green-500/40">
                             <input
                               type="text"
                               readOnly
@@ -565,26 +585,26 @@ export default function OrganizerDashboard() {
                             />
                           </div>
                         </div>
-                        <div className="flex gap-2 items-end flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (!registrationLink) return;
-                              navigator.clipboard.writeText(registrationLink);
-                              toast.success('Registration link copied! Share it with players.');
-                            }}
-                            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-heading uppercase tracking-wider text-xs glow-gold hover:scale-[1.02] transition-all"
-                          >
-                            📋 Copy Link
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => registrationLink && window.open(registrationLink, '_blank')}
-                            className="px-6 py-3 rounded-lg border border-primary/30 text-primary font-heading uppercase tracking-wider text-xs hover:bg-primary/10 transition-all"
-                          >
-                            👁️ Open Form
-                          </button>
-                        </div>
+                      </div>
+                      <div className="flex gap-3 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!registrationLink) return;
+                            navigator.clipboard.writeText(registrationLink);
+                            toast.success('Registration link copied! Share with anyone.');
+                          }}
+                          className="flex-1 min-w-[200px] px-6 py-3 rounded-lg bg-green-500 text-white font-heading uppercase tracking-wider text-sm hover:bg-green-600 transition-all font-bold"
+                        >
+                          📋 Copy Link
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => registrationLink && window.open(registrationLink, '_blank')}
+                          className="flex-1 min-w-[200px] px-6 py-3 rounded-lg border-2 border-green-500 text-green-400 font-heading uppercase tracking-wider text-sm hover:bg-green-500/10 transition-all font-bold"
+                        >
+                          👁️ Open Form
+                        </button>
                       </div>
                     </div>
 
