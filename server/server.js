@@ -184,12 +184,16 @@ mongoose.connect(MONGODB_URI, {
 .then(async () => {
   console.log('✅ MongoDB connected');
 
-  // Verify SMTP connection on startup (non-fatal)
+  // Verify SMTP connection on startup (non-fatal - don't fail deployment)
   try {
-    const { verifyTransporter } = require('./utils/email');
-    await verifyTransporter();
+    const { verifyTransporter, isEmailConfigured } = require('./utils/email');
+    if (isEmailConfigured()) {
+      await verifyTransporter();
+    } else {
+      console.warn('⚠️  Email not configured - email features will be disabled');
+    }
   } catch (e) {
-    console.warn('⚠️  Email transporter check skipped:', e.message);
+    console.warn('⚠️  Email transporter check failed (non-fatal):', e.message);
   }
 
   // Initialize socket auction engine
