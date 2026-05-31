@@ -5,13 +5,15 @@
 const nodemailer = require('nodemailer');
 
 // ─── Gmail SMTP Configuration ───────────────────────────────────────────────
-const EMAIL_USER = 'beastcricketofficialauction@gmail.com';
-const EMAIL_PASS = 'gdgz afbz oyjm grxx'; // Gmail App Password (WITH spaces — required by Gmail)
+const EMAIL_USER = process.env.EMAIL_USER || 'beastcricketofficialauction@gmail.com';
+const EMAIL_PASS = process.env.EMAIL_PASS || 'gdgz afbz oyjm grxx'; // Gmail App Password (WITH spaces — required by Gmail)
+const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com';
+const EMAIL_PORT = process.env.EMAIL_PORT || 465;
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // SSL on port 465
+  host: EMAIL_HOST,
+  port: parseInt(EMAIL_PORT),
+  secure: parseInt(EMAIL_PORT) === 465, // SSL on port 465
   auth: {
     user: EMAIL_USER,
     pass: EMAIL_PASS,
